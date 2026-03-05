@@ -4,20 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
-
-// Generate months from January 2025 to December 2026
-const generateMonths = () => {
-  const months = [];
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  for (let year = 2025; year <= 2026; year++) {
-    for (let month = 1; month <= 12; month++) {
-      const value = `${year}-${String(month).padStart(2, '0')}`;
-      const label = `${monthNames[month - 1]} ${year}`;
-      months.push({ value, label });
-    }
-  }
-  return months;
-};
+import { generateMonths } from '@/lib/months';
 
 const PR_MONTHS = generateMonths();
 

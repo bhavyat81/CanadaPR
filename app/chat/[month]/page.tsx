@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
+import { formatMonth } from '@/lib/months';
 
 interface Message {
   id: string;
@@ -15,13 +16,6 @@ interface Message {
   content: string;
   created_at: string;
 }
-
-// Format "2025-11" -> "November 2025"
-const formatMonth = (monthStr: string): string => {
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const [year, month] = monthStr.split('-');
-  return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
-};
 
 export default function ChatPage({ params }: { params: Promise<{ month: string }> }) {
   const { month } = use(params);
