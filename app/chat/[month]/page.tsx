@@ -8,6 +8,9 @@ import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import { formatMonth } from '@/lib/months';
 
+// Maximum number of messages to load per chat room
+const MESSAGES_LIMIT = 100;
+
 interface Message {
   id: string;
   group_month: string;
@@ -58,7 +61,7 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
         .select('*')
         .eq('group_month', decodedMonth)
         .order('created_at', { ascending: true })
-        .limit(100);
+        .limit(MESSAGES_LIMIT);
 
       setMessages(data || []);
       setLoadingMessages(false);

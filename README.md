@@ -24,7 +24,7 @@ Canada PR Chat allows PR applicants to join monthly chat groups (e.g., "November
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/bhavyat81/CanadaPR.git
+git clone https://github.com/YOUR_USERNAME/CanadaPR.git
 cd CanadaPR
 ```
 
