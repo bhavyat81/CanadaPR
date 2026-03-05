@@ -37,14 +37,12 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     }
   }, [user, authLoading, router]);
 
-  // Load existing profile
   useEffect(() => {
     if (user) {
       supabase
