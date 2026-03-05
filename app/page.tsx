@@ -1,0 +1,103 @@
+import Link from 'next/link';
+
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-red-600 to-red-800 text-white py-24 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="text-6xl mb-6">🇨🇦</div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            Canada PR Chat
+          </h1>
+          <p className="text-xl md:text-2xl text-red-100 mb-8 max-w-2xl mx-auto">
+            Connect with fellow Canada Permanent Residence applicants who applied in the same month as you
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/signup"
+              className="bg-white text-red-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-50 transition-colors shadow-lg"
+            >
+              Get Started — Sign Up
+            </Link>
+            <Link
+              href="/login"
+              className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-700 transition-colors"
+            >
+              Log In
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
+            Why Canada PR Chat?
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-xl shadow-md text-center">
+              <div className="text-4xl mb-4">💬</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Monthly Chat Groups</h3>
+              <p className="text-gray-600">
+                Join your application month&apos;s chat group and connect with applicants at the same stage as you.
+              </p>
+            </div>
+            <div className="bg-white p-8 rounded-xl shadow-md text-center">
+              <div className="text-4xl mb-4">⚡</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Real-time Messaging</h3>
+              <p className="text-gray-600">
+                Get instant updates and share your journey with real-time chat powered by Supabase.
+              </p>
+            </div>
+            <div className="bg-white p-8 rounded-xl shadow-md text-center">
+              <div className="text-4xl mb-4">🤝</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Community Support</h3>
+              <p className="text-gray-600">
+                Share tips, updates, and support each other through the Canadian PR application process.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="bg-white py-20 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">How It Works</h2>
+          <div className="space-y-8">
+            {[
+              { step: '1', title: 'Create Your Account', description: 'Sign up with your email and password' },
+              { step: '2', title: 'Set Up Your Profile', description: 'Enter your PR application month, stream, and status' },
+              { step: '3', title: 'Join Your Group', description: "Automatically matched to your application month's chat group" },
+              { step: '4', title: 'Start Chatting', description: 'Connect with fellow applicants in real-time' },
+            ].map(({ step, title, description }) => (
+              <div key={step} className="flex items-start space-x-4">
+                <div className="bg-red-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  {step}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+                  <p className="text-gray-600">{description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Footer */}
+      <section className="bg-red-600 text-white py-16 px-4 text-center">
+        <h2 className="text-3xl font-bold mb-4">Ready to connect?</h2>
+        <p className="text-red-100 mb-8 text-lg">Join thousands of Canadian PR applicants today</p>
+        <Link
+          href="/signup"
+          className="bg-white text-red-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-50 transition-colors"
+        >
+          Sign Up Free
+        </Link>
+      </section>
+    </div>
+  );
+}
