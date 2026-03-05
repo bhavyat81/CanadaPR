@@ -1,11 +1,13 @@
 interface ChatMessageProps {
   senderName: string;
+  senderId: string;
   content: string;
   createdAt: string;
   isOwnMessage: boolean;
+  onClickSender?: (senderId: string) => void;
 }
 
-export default function ChatMessage({ senderName, content, createdAt, isOwnMessage }: ChatMessageProps) {
+export default function ChatMessage({ senderName, senderId, content, createdAt, isOwnMessage, onClickSender }: ChatMessageProps) {
   const formattedTime = new Date(createdAt).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -14,7 +16,12 @@ export default function ChatMessage({ senderName, content, createdAt, isOwnMessa
   return (
     <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-4`}>
       {!isOwnMessage && (
-        <span className="text-xs text-gray-500 mb-1 ml-1">{senderName}</span>
+        <span
+          className="text-xs text-gray-500 mb-1 ml-1 cursor-pointer hover:underline"
+          onClick={() => onClickSender?.(senderId)}
+        >
+          {senderName}
+        </span>
       )}
       <div
         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
