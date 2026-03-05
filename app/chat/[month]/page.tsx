@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import { formatMonth } from '@/lib/months';
+import UserJourneyModal from '@/components/UserJourneyModal';
 
 // Maximum number of messages to load per chat room
 const MESSAGES_LIMIT = 100;
@@ -27,6 +28,7 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const [messages, setMessages] = useState<Message[]>([]);
   const [userProfile, setUserProfile] = useState<{ display_name: string } | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const decodedMonth = decodeURIComponent(month);
@@ -81,7 +83,12 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
           filter: `group_month=eq.${decodedMonth}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+          setMessages((prev) => {
+            const newMsg = payload.new as Message;
+            // Avoid duplicate if already added optimistically
+            if (prev.some((msg) => msg.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
         }
       )
       .subscribe();
@@ -99,12 +106,36 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const handleSendMessage = async (content: string) => {
     if (!user || !userProfile) return;
 
-    await supabase.from('messages').insert({
+    // Optimistic update — show immediately
+    const optimisticMessage: Message = {
+      id: `temp-${crypto.randomUUID()}`,
       group_month: decodedMonth,
       sender_id: user.id,
       sender_name: userProfile.display_name,
       content,
-    });
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
+
+    const { data, error } = await supabase.from('messages').insert({
+      group_month: decodedMonth,
+      sender_id: user.id,
+      sender_name: userProfile.display_name,
+      content,
+    }).select().single();
+
+    if (error) {
+      // Remove the optimistic message on failure
+      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticMessage.id));
+      return;
+    }
+
+    // Replace optimistic message with real one
+    if (data) {
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === optimisticMessage.id ? data : msg))
+      );
+    }
   };
 
   if (authLoading) {
@@ -153,9 +184,11 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
               <ChatMessage
                 key={msg.id}
                 senderName={msg.sender_name}
+                senderId={msg.sender_id}
                 content={msg.content}
                 createdAt={msg.created_at}
                 isOwnMessage={msg.sender_id === user?.id}
+                onClickSender={setSelectedUserId}
               />
             ))
           )}
@@ -177,6 +210,14 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
           <ChatInput onSendMessage={handleSendMessage} />
         )}
       </div>
+
+      {selectedUserId && (
+        <UserJourneyModal
+          userId={selectedUserId}
+          isOpen={true}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
     </div>
   );
 }
