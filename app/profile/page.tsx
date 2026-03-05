@@ -136,11 +136,11 @@ export default function ProfilePage() {
               value={prMonth}
               onChange={(e) => setPrMonth(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-gray-900"
             >
-              <option value="">Select your application month</option>
+              <option value="" className="text-gray-900 bg-white">Select your application month</option>
               {PR_MONTHS.map(({ value, label }) => (
-                <option key={value} value={value}>{label}</option>
+                <option key={value} value={value} className="text-gray-900 bg-white">{label}</option>
               ))}
             </select>
           </div>
@@ -150,11 +150,11 @@ export default function ProfilePage() {
             <select
               value={prStream}
               onChange={(e) => setPrStream(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-gray-900"
             >
-              <option value="">Select your PR stream</option>
+              <option value="" className="text-gray-900 bg-white">Select your PR stream</option>
               {PR_STREAMS.map((stream) => (
-                <option key={stream} value={stream}>{stream}</option>
+                <option key={stream} value={stream} className="text-gray-900 bg-white">{stream}</option>
               ))}
             </select>
           </div>
@@ -164,11 +164,11 @@ export default function ProfilePage() {
             <select
               value={appStatus}
               onChange={(e) => setAppStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-gray-900"
             >
-              <option value="">Select your current status</option>
+              <option value="" className="text-gray-900 bg-white">Select your current status</option>
               {APPLICATION_STATUSES.map((status) => (
-                <option key={status} value={status}>{status}</option>
+                <option key={status} value={status} className="text-gray-900 bg-white">{status}</option>
               ))}
             </select>
           </div>
