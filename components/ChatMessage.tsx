@@ -23,10 +23,10 @@ export default function ChatMessage({
   const displayName = isOwnMessage ? 'You' : senderName;
 
   return (
-    <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-4`}>
+    <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-4`}>  
       <button
-        className={`text-xs text-gray-500 mb-1 mx-1 hover:underline focus:outline-none ${
-          isOwnMessage ? 'text-right' : 'text-left'
+        className={`text-xs font-semibold mb-1 mx-1 hover:underline focus:outline-none ${
+          isOwnMessage ? 'text-red-600 text-right' : 'text-blue-600 text-left'
         }`}
         onClick={() => onClickUsername?.(senderId)}
       >
