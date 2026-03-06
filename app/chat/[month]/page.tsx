@@ -6,13 +6,10 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
-import UserStatusModal from '@/components/UserStatusModal';
 import { formatMonth } from '@/lib/months';
 
 // Maximum number of messages to load per chat room
 const MESSAGES_LIMIT = 100;
-// Prefix used to identify locally-created optimistic messages before server confirmation
-const OPTIMISTIC_PREFIX = 'optimistic-';
 
 interface Message {
   id: string;
@@ -23,12 +20,6 @@ interface Message {
   created_at: string;
 }
 
-interface ModalUser {
-  display_name: string;
-  application_status: string;
-  pr_stream: string;
-}
-
 export default function ChatPage({ params }: { params: Promise<{ month: string }> }) {
   const { month } = use(params);
   const { user, loading: authLoading } = useAuth();
@@ -36,7 +27,6 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const [messages, setMessages] = useState<Message[]>([]);
   const [userProfile, setUserProfile] = useState<{ display_name: string } | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(true);
-  const [modalUser, setModalUser] = useState<ModalUser | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const decodedMonth = decodeURIComponent(month);
@@ -91,14 +81,7 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
           filter: `group_month=eq.${decodedMonth}`,
         },
         (payload) => {
-          const incoming = payload.new as Message;
-          setMessages((prev) => {
-            // Avoid duplicating optimistically-added messages
-            if (prev.some((m) => m.id === incoming.id)) return prev;
-            // Replace the temporary optimistic message if it exists
-            const withoutOptimistic = prev.filter((m) => !m.id.startsWith(OPTIMISTIC_PREFIX));
-            return [...withoutOptimistic, incoming];
-          });
+          setMessages((prev) => [...prev, payload.new as Message]);
         }
       )
       .subscribe();
@@ -116,34 +99,12 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const handleSendMessage = async (content: string) => {
     if (!user || !userProfile) return;
 
-    // Optimistically add message to state immediately
-    const optimisticMessage: Message = {
-      id: `${OPTIMISTIC_PREFIX}${Date.now()}`,
-      group_month: decodedMonth,
-      sender_id: user.id,
-      sender_name: userProfile.display_name,
-      content,
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, optimisticMessage]);
-
     await supabase.from('messages').insert({
       group_month: decodedMonth,
       sender_id: user.id,
       sender_name: userProfile.display_name,
       content,
     });
-  };
-
-  const handleClickUsername = async (senderId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('display_name, application_status, pr_stream')
-      .eq('id', senderId)
-      .single();
-
-    if (error || !data) return;
-    setModalUser(data as ModalUser);
   };
 
   if (authLoading) {
@@ -155,29 +116,29 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
       {/* Chat Header */}
-      <div className="bg-white border-b px-4 py-4 shadow-sm">
+      <div className="bg-white border-b px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
               🇨🇦 {displayMonth} Chat
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs sm:text-sm text-gray-500 truncate">
               {decodedMonth} applicants group
             </p>
           </div>
           <button
             onClick={() => router.push('/groups')}
-            className="text-red-600 hover:text-red-700 font-medium text-sm"
+            className="text-red-600 hover:text-red-700 font-medium text-sm ml-2 whitespace-nowrap"
           >
-            ← Back to Groups
+            ← Back
           </button>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
+      <div className="flex-1 overflow-y-auto bg-gray-50 px-3 sm:px-4 py-4">
         <div className="max-w-4xl mx-auto">
           {loadingMessages ? (
             <div className="text-center text-gray-500 py-8">Loading messages...</div>
@@ -196,7 +157,6 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
                 content={msg.content}
                 createdAt={msg.created_at}
                 isOwnMessage={msg.sender_id === user?.id}
-                onClickUsername={handleClickUsername}
               />
             ))
           )}
@@ -218,16 +178,6 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
           <ChatInput onSendMessage={handleSendMessage} />
         )}
       </div>
-
-      {/* User Status Modal */}
-      {modalUser && (
-        <UserStatusModal
-          displayName={modalUser.display_name}
-          prStream={modalUser.pr_stream}
-          applicationStatus={modalUser.application_status}
-          onClose={() => setModalUser(null)}
-        />
-      )}
     </div>
   );
 }
