@@ -6,10 +6,13 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
+import UserStatusModal from '@/components/UserStatusModal';
 import { formatMonth } from '@/lib/months';
 
 // Maximum number of messages to load per chat room
 const MESSAGES_LIMIT = 100;
+// Prefix used to identify locally-created optimistic messages before server confirmation
+const OPTIMISTIC_PREFIX = 'optimistic-';
 
 interface Message {
   id: string;
@@ -20,6 +23,12 @@ interface Message {
   created_at: string;
 }
 
+interface ModalUser {
+  display_name: string;
+  application_status: string;
+  pr_stream: string;
+}
+
 export default function ChatPage({ params }: { params: Promise<{ month: string }> }) {
   const { month } = use(params);
   const { user, loading: authLoading } = useAuth();
@@ -27,6 +36,7 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const [messages, setMessages] = useState<Message[]>([]);
   const [userProfile, setUserProfile] = useState<{ display_name: string } | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(true);
+  const [modalUser, setModalUser] = useState<ModalUser | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const decodedMonth = decodeURIComponent(month);
@@ -81,7 +91,14 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
           filter: `group_month=eq.${decodedMonth}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+          const incoming = payload.new as Message;
+          setMessages((prev) => {
+            // Avoid duplicating optimistically-added messages
+            if (prev.some((m) => m.id === incoming.id)) return prev;
+            // Replace the temporary optimistic message if it exists
+            const withoutOptimistic = prev.filter((m) => !m.id.startsWith(OPTIMISTIC_PREFIX));
+            return [...withoutOptimistic, incoming];
+          });
         }
       )
       .subscribe();
@@ -99,12 +116,34 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const handleSendMessage = async (content: string) => {
     if (!user || !userProfile) return;
 
+    // Optimistically add message to state immediately
+    const optimisticMessage: Message = {
+      id: `${OPTIMISTIC_PREFIX}${Date.now()}`,
+      group_month: decodedMonth,
+      sender_id: user.id,
+      sender_name: userProfile.display_name,
+      content,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
+
     await supabase.from('messages').insert({
       group_month: decodedMonth,
       sender_id: user.id,
       sender_name: userProfile.display_name,
       content,
     });
+  };
+
+  const handleClickUsername = async (senderId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('display_name, application_status, pr_stream')
+      .eq('id', senderId)
+      .single();
+
+    if (error || !data) return;
+    setModalUser(data as ModalUser);
   };
 
   if (authLoading) {
@@ -152,10 +191,12 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
             messages.map((msg) => (
               <ChatMessage
                 key={msg.id}
+                senderId={msg.sender_id}
                 senderName={msg.sender_name}
                 content={msg.content}
                 createdAt={msg.created_at}
                 isOwnMessage={msg.sender_id === user?.id}
+                onClickUsername={handleClickUsername}
               />
             ))
           )}
@@ -177,6 +218,16 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
           <ChatInput onSendMessage={handleSendMessage} />
         )}
       </div>
+
+      {/* User Status Modal */}
+      {modalUser && (
+        <UserStatusModal
+          displayName={modalUser.display_name}
+          prStream={modalUser.pr_stream}
+          applicationStatus={modalUser.application_status}
+          onClose={() => setModalUser(null)}
+        />
+      )}
     </div>
   );
 }
