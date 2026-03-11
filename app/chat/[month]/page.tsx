@@ -27,6 +27,7 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const [messages, setMessages] = useState<Message[]>([]);
   const [userProfile, setUserProfile] = useState<{ display_name: string } | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(true);
+  const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const decodedMonth = decodeURIComponent(month);
@@ -47,7 +48,13 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
       .select('display_name')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => setUserProfile(data));
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to load profile:', error);
+          return;
+        }
+        setUserProfile(data);
+      });
   }, [user]);
 
   // Load initial messages
@@ -99,12 +106,19 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
   const handleSendMessage = async (content: string) => {
     if (!user || !userProfile) return;
 
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       group_month: decodedMonth,
       sender_id: user.id,
       sender_name: userProfile.display_name,
       content,
     });
+
+    if (error) {
+      console.error('Failed to send message:', error);
+      setSendError('Failed to send message. Please check your connection and try again.');
+    } else {
+      setSendError(null);
+    }
   };
 
   if (authLoading) {
@@ -166,6 +180,12 @@ export default function ChatPage({ params }: { params: Promise<{ month: string }
 
       {/* Chat Input */}
       <div className="max-w-4xl mx-auto w-full">
+        {sendError && (
+          <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm flex items-center justify-between">
+            <span>{sendError}</span>
+            <button onClick={() => setSendError(null)} className="ml-2 text-red-500 hover:text-red-700 font-bold">✕</button>
+          </div>
+        )}
         {!userProfile ? (
           <div className="p-4 bg-yellow-50 border-t text-center text-yellow-800">
             Please{' '}
