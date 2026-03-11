@@ -10,6 +10,7 @@ const PR_MONTHS = generateMonths();
 
 const PR_STREAMS = [
   'Express Entry',
+  'Non-Express Entry',
   'Provincial Nominee Program (PNP)',
   'Family Sponsorship',
   'Canadian Experience Class',
