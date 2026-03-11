@@ -33,7 +33,7 @@ export default function ChatMessage({
         {displayName}
       </button>
       <div
-        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+        className={`max-w-[75%] px-4 py-2 rounded-2xl ${
           isOwnMessage
             ? 'bg-red-600 text-white rounded-br-none'
             : 'bg-gray-100 text-gray-800 rounded-bl-none'
