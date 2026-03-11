@@ -30,9 +30,9 @@ export default function Navbar() {
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link href="/" className="hover:text-red-200 transition-colors">Home</Link>
             {user ? (
               <>
+                <Link href="/welcome" className="hover:text-red-200 transition-colors">Home</Link>
                 <Link href="/groups" className="hover:text-red-200 transition-colors">Groups</Link>
                 <Link href="/profile" className="hover:text-red-200 transition-colors">My Profile</Link>
                 <span className="text-red-200 text-sm truncate max-w-[150px]">{user.email}</span>
@@ -45,6 +45,7 @@ export default function Navbar() {
               </>
             ) : (
               <>
+                <Link href="/" className="hover:text-red-200 transition-colors">Home</Link>
                 <Link href="/login" className="hover:text-red-200 transition-colors">Log In</Link>
                 <Link
                   href="/signup"
@@ -77,11 +78,11 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-t border-red-500">
           <div className="px-4 py-3 space-y-3">
-            <Link href="/" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
-              Home
-            </Link>
             {user ? (
               <>
+                <Link href="/welcome" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
+                  Home
+                </Link>
                 <Link href="/groups" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
                   Groups
                 </Link>
@@ -98,6 +99,9 @@ export default function Navbar() {
               </>
             ) : (
               <>
+                <Link href="/" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
+                  Home
+                </Link>
                 <Link href="/login" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
                   Log In
                 </Link>
