@@ -1,19 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function SignupPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/welcome');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500 text-lg">Loading…</div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return null;
+  }
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     setMessage('');
 
@@ -21,10 +43,10 @@ export default function SignupPage() {
 
     if (error) {
       setError(error.message);
-      setLoading(false);
+      setSubmitting(false);
     } else {
       setMessage('Account created! Please check your email to confirm, then log in.');
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -76,10 +98,10 @@ export default function SignupPage() {
           </div>
           <button
             type="submit"
-            disabled={loading}
+            disabled={submitting}
             className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Creating account...' : 'Sign Up'}
+            {submitting ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
