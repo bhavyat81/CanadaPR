@@ -5,11 +5,11 @@ interface GroupCardProps {
   displayName: string;    // e.g., "November 2025"
   memberCount: number;
   isUserGroup: boolean;
-  category?: string;      // e.g., "express-entry-fsw"
+  category: string;      // e.g., "express-entry-fsw"
 }
 
 export default function GroupCard({ month, displayName, memberCount, isUserGroup, category }: GroupCardProps) {
-  const href = category ? `/chat/${category}/${month}` : `/chat/${month}`;
+  const href = `/chat/${category}/${month}`;
 
   return (
     <Link href={href}>
