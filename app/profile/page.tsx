@@ -5,27 +5,9 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { generateMonths } from '@/lib/months';
+import { PR_CATEGORIES, JOURNEY_STEPS } from '@/lib/categories';
 
 const PR_MONTHS = generateMonths();
-
-const PR_STREAMS = [
-  'Express Entry',
-  'Non-Express Entry',
-  'Provincial Nominee Program (PNP)',
-  'Family Sponsorship',
-  'Canadian Experience Class',
-  'Other',
-];
-
-const APPLICATION_STATUSES = [
-  'AOR Received',
-  'Biometrics Done',
-  'Medicals Done',
-  'Background Check',
-  'PPR',
-  'COPR',
-  'Waiting',
-];
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -33,7 +15,8 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [prMonth, setPrMonth] = useState('');
   const [prStream, setPrStream] = useState('');
-  const [appStatus, setAppStatus] = useState('');
+  const [prCategory, setPrCategory] = useState('');
+  const [stepDates, setStepDates] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -45,21 +28,32 @@ export default function ProfilePage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user) {
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) {
-            setDisplayName(data.display_name || '');
-            setPrMonth(data.pr_month || '');
-            setPrStream(data.pr_stream || '');
-            setAppStatus(data.application_status || '');
-          }
+    if (!user) return;
+
+    const loadProfile = async () => {
+      const [profileResult, stepsResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('journey_steps').select('step_name, step_date').eq('user_id', user.id),
+      ]);
+
+      if (profileResult.data) {
+        const data = profileResult.data;
+        setDisplayName(data.display_name || '');
+        setPrMonth(data.pr_month || '');
+        setPrStream(data.pr_stream || '');
+        setPrCategory(data.pr_category || '');
+      }
+
+      if (!stepsResult.error && stepsResult.data) {
+        const dates: Record<string, string> = {};
+        stepsResult.data.forEach(({ step_name, step_date }) => {
+          if (step_date) dates[step_name] = step_date;
         });
-    }
+        setStepDates(dates);
+      }
+    };
+
+    loadProfile();
   }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -69,22 +63,55 @@ export default function ProfilePage() {
     setError('');
     setSuccess('');
 
-    const { error } = await supabase.from('profiles').upsert({
+    // Determine latest step for backwards-compatible application_status
+    const latestStep = [...JOURNEY_STEPS].reverse().find((s) => stepDates[s]);
+    const applicationStatus = latestStep
+      ? `${latestStep} (${stepDates[latestStep]})`
+      : '';
+
+    const { error: profileError } = await supabase.from('profiles').upsert({
       id: user.id,
       display_name: displayName,
       pr_month: prMonth,
       pr_stream: prStream,
-      application_status: appStatus,
+      pr_category: prCategory,
+      application_status: applicationStatus,
       updated_at: new Date().toISOString(),
     });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSuccess('Profile saved successfully!');
-      setTimeout(() => router.push('/groups'), 1500);
+    if (profileError) {
+      setError(profileError.message);
+      setLoading(false);
+      return;
     }
+
+    // Upsert journey steps for each step that has a date
+    const stepsToUpsert = JOURNEY_STEPS.filter((step) => stepDates[step]).map((step) => ({
+      user_id: user.id,
+      step_name: step,
+      step_date: stepDates[step],
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (stepsToUpsert.length > 0) {
+      const { error: stepsError } = await supabase
+        .from('journey_steps')
+        .upsert(stepsToUpsert, { onConflict: 'user_id,step_name' });
+
+      if (stepsError) {
+        setError(stepsError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    setSuccess('Profile saved successfully!');
+    setTimeout(() => router.push('/groups'), 1500);
     setLoading(false);
+  };
+
+  const handleStepDate = (step: string, value: string) => {
+    setStepDates((prev) => ({ ...prev, [step]: value }));
   };
 
   if (authLoading) {
@@ -137,39 +164,56 @@ export default function ProfilePage() {
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
-              <option value="" className="text-gray-900 bg-white">Select your application month</option>
+              <option value="">Select your application month</option>
               {PR_MONTHS.map(({ value, label }) => (
-                <option key={value} value={value} className="text-gray-900 bg-white">{label}</option>
+                <option key={value} value={value}>{label}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">PR Stream</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">PR Category</label>
             <select
-              value={prStream}
-              onChange={(e) => setPrStream(e.target.value)}
+              value={prCategory}
+              onChange={(e) => setPrCategory(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
-              <option value="" className="text-gray-900 bg-white">Select your PR stream</option>
-              {PR_STREAMS.map((stream) => (
-                <option key={stream} value={stream} className="text-gray-900 bg-white">{stream}</option>
+              <option value="">Select your PR category</option>
+              {PR_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>{cat.label}</option>
               ))}
             </select>
           </div>
 
+          {/* Journey Step Dates */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Application Status</label>
-            <select
-              value={appStatus}
-              onChange={(e) => setAppStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            >
-              <option value="" className="text-gray-900 bg-white">Select your current status</option>
-              {APPLICATION_STATUSES.map((status) => (
-                <option key={status} value={status} className="text-gray-900 bg-white">{status}</option>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              PR Journey Dates <span className="text-gray-400 font-normal">(optional — fill in dates you have received)</span>
+            </label>
+            <div className="space-y-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
+              {JOURNEY_STEPS.map((step) => (
+                <div key={step} className="flex items-center gap-3">
+                  <span className="text-sm w-40 text-gray-700 flex-shrink-0">{step}</span>
+                  <input
+                    type="date"
+                    value={stepDates[step] || ''}
+                    onChange={(e) => handleStepDate(step, e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                  {stepDates[step] && (
+                    <button
+                      type="button"
+                      onClick={() => handleStepDate(step, '')}
+                      className="text-gray-400 hover:text-gray-600 text-sm"
+                      aria-label={`Clear ${step} date`}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
           <button
