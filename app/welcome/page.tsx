@@ -4,25 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
+import { JOURNEY_STEPS } from '@/lib/categories';
 
 const SUCCESS_REDIRECT_DELAY = 1500;
-
-const UPDATE_TYPES = [
-  { value: 'PPR', label: 'PPR', description: 'Passport Request' },
-  { value: 'Background Check', label: 'Background Check', description: 'Security/background screening' },
-  { value: 'Medical Request', label: 'Medical Request', description: 'Medical examination request' },
-  { value: 'Biometrics Request', label: 'Biometrics Request', description: 'Biometrics collection request' },
-  { value: 'AOR', label: 'AOR', description: 'Acknowledgement of Receipt' },
-  { value: 'COPR', label: 'COPR', description: 'Confirmation of PR' },
-  { value: 'Other', label: 'Other', description: 'Other update' },
-];
 
 export default function WelcomePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [displayName, setDisplayName] = useState('');
-  const [selectedType, setSelectedType] = useState('');
+  const [selectedStep, setSelectedStep] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -55,7 +46,7 @@ export default function WelcomePage() {
   }, [user, router]);
 
   const handleSave = async () => {
-    if (!user || !selectedType || !selectedDate) return;
+    if (!user || !selectedStep || !selectedDate) return;
 
     // Validate date is not in the future
     const today = new Date().toISOString().split('T')[0];
@@ -67,9 +58,26 @@ export default function WelcomePage() {
     setSaving(true);
     setError('');
 
-    const statusWithDate = `${selectedType} (${selectedDate})`;
+    // Save to journey_steps table
+    const { error: stepsError } = await supabase.from('journey_steps').upsert(
+      {
+        user_id: user.id,
+        step_name: selectedStep,
+        step_date: selectedDate,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,step_name' }
+    );
 
-    const { error: updateError } = await supabase
+    if (stepsError) {
+      setSaving(false);
+      setError('Failed to save update. Please try again.');
+      return;
+    }
+
+    // Also update application_status for backwards compatibility
+    const statusWithDate = `${selectedStep} (${selectedDate})`;
+    await supabase
       .from('profiles')
       .update({
         application_status: statusWithDate,
@@ -78,12 +86,6 @@ export default function WelcomePage() {
       .eq('id', user.id);
 
     setSaving(false);
-
-    if (updateError) {
-      setError('Failed to save update. Please try again.');
-      return;
-    }
-
     setStep(4);
     setTimeout(() => {
       router.push('/groups');
@@ -129,7 +131,7 @@ export default function WelcomePage() {
           </div>
         )}
 
-        {/* Step 2: Select update type */}
+        {/* Step 2: Select journey step */}
         {step === 2 && (
           <div>
             <button
@@ -138,20 +140,22 @@ export default function WelcomePage() {
             >
               ← Back
             </button>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Which update did you receive?</h2>
-            <p className="text-gray-500 text-sm mb-6">Select the type of update you received</p>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Which step did you complete?</h2>
+            <p className="text-gray-500 text-sm mb-6">Select the step in your PR journey</p>
             <div className="space-y-3">
-              {UPDATE_TYPES.map((type) => (
+              {JOURNEY_STEPS.map((journeyStep, index) => (
                 <button
-                  key={type.value}
+                  key={journeyStep}
                   onClick={() => {
-                    setSelectedType(type.value);
+                    setSelectedStep(journeyStep);
                     setStep(3);
                   }}
                   className="w-full text-left border border-gray-200 rounded-xl px-4 py-3 hover:border-red-400 hover:bg-red-50 transition-colors"
                 >
-                  <div className="font-semibold text-gray-800">{type.label}</div>
-                  <div className="text-sm text-gray-500">{type.description}</div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-400 font-medium w-5">{index + 1}.</span>
+                    <span className="font-semibold text-gray-800">{journeyStep}</span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -169,7 +173,7 @@ export default function WelcomePage() {
             </button>
             <h2 className="text-xl font-bold text-gray-800 mb-2">When did you receive this update?</h2>
             <p className="text-gray-500 text-sm mb-2">
-              Update: <span className="font-medium text-red-600">{selectedType}</span>
+              Step: <span className="font-medium text-red-600">{selectedStep}</span>
             </p>
             <div className="mb-6 mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Date received</label>

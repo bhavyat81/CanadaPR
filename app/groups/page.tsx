@@ -4,20 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
-import GroupCard from '@/components/GroupCard';
-import { generateMonths } from '@/lib/months';
+import CategoryCard from '@/components/CategoryCard';
+import { PR_CATEGORIES } from '@/lib/categories';
 
-const ALL_MONTHS = generateMonths();
-
-interface MemberCounts {
-  [month: string]: number;
+interface CategoryCounts {
+  [category: string]: number;
 }
 
 export default function GroupsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<{ pr_month: string } | null>(null);
-  const [memberCounts, setMemberCounts] = useState<MemberCounts>({});
+  const [userCategory, setUserCategory] = useState<string | null>(null);
+  const [categoryCounts, setCategoryCounts] = useState<CategoryCounts>({});
   const [loadingData, setLoadingData] = useState(true);
 
   // Redirect if not logged in
@@ -33,26 +31,28 @@ export default function GroupsPage() {
     const loadData = async () => {
       setLoadingData(true);
 
-      // Load user profile
+      // Load user profile to get their category
       const { data: profile } = await supabase
         .from('profiles')
-        .select('pr_month')
+        .select('pr_category')
         .eq('id', user.id)
         .single();
 
-      setUserProfile(profile);
+      setUserCategory(profile?.pr_category ?? null);
 
-      // Load member counts for all months
+      // Load member counts per category
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('pr_month');
+        .select('pr_category');
 
       if (profiles) {
-        const counts: MemberCounts = {};
-        profiles.forEach(({ pr_month }) => {
-          counts[pr_month] = (counts[pr_month] || 0) + 1;
+        const counts: CategoryCounts = {};
+        profiles.forEach(({ pr_category }) => {
+          if (pr_category) {
+            counts[pr_category] = (counts[pr_category] || 0) + 1;
+          }
         });
-        setMemberCounts(counts);
+        setCategoryCounts(counts);
       }
 
       setLoadingData(false);
@@ -75,25 +75,24 @@ export default function GroupsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800">PR Applicant Groups</h1>
           <p className="text-gray-600 mt-2">
-            Connect with applicants who applied in the same month as you
+            Select your PR category to find your group
           </p>
-          {!userProfile && (
+          {!userCategory && (
             <div className="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
               <span>Set up your </span>
               <a href="/profile" className="font-medium underline">profile</a>
-              <span> to highlight your application month group!</span>
+              <span> to highlight your category!</span>
             </div>
           )}
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {ALL_MONTHS.map(({ value, label }) => (
-            <GroupCard
-              key={value}
-              month={value}
-              displayName={label}
-              memberCount={memberCounts[value] || 0}
-              isUserGroup={userProfile?.pr_month === value}
+          {PR_CATEGORIES.map((category) => (
+            <CategoryCard
+              key={category.value}
+              category={category}
+              memberCount={categoryCounts[category.value] || 0}
+              isUserCategory={userCategory === category.value}
             />
           ))}
         </div>
