@@ -8,6 +8,7 @@ export const PR_CATEGORIES: PRCategory[] = [
   { value: 'express-entry-fsw', label: 'Express Entry - Federal Skilled Worker (FSW)', shortLabel: 'EE - FSW' },
   { value: 'express-entry-fst', label: 'Express Entry - Federal Skilled Trades (FST)', shortLabel: 'EE - FST' },
   { value: 'express-entry-cec', label: 'Express Entry - Canadian Experience Class (CEC)', shortLabel: 'EE - CEC' },
+  { value: 'non-express-entry', label: 'Non-Express Entry', shortLabel: 'Non-EE' },
   { value: 'pnp', label: 'Provincial Nominee Program (PNP)', shortLabel: 'PNP' },
   { value: 'family-spousal', label: 'Family Sponsorship - Spousal/Partner', shortLabel: 'Family - Spousal' },
   { value: 'family-parent', label: 'Family Sponsorship - Parent & Grandparent', shortLabel: 'Family - PGP' },
