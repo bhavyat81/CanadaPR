@@ -39,6 +39,9 @@ export default function CategoryChatPage({
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [userProfile, setUserProfile] = useState<{ display_name: string } | null>(null);
+  const [isMember, setIsMember] = useState<boolean | null>(null); // null = loading
+  const [joiningGroup, setJoiningGroup] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [sendError, setSendError] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -77,18 +80,46 @@ export default function CategoryChatPage({
       });
   }, [user]);
 
-  // Load members for this category+month group
+  // Check if current user is a member of this group and load members list
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('profiles')
-      .select('id, display_name')
-      .eq('pr_category', decodedCategory)
-      .eq('pr_month', decodedMonth)
-      .then(({ data }) => {
-        setMembers(data ?? []);
-      });
-  }, [user, decodedCategory, decodedMonth]);
+
+    // Type for row returned by group_members joined with profiles
+    interface GroupMemberRow {
+      profiles: { id: string; display_name: string } | { id: string; display_name: string }[] | null;
+    }
+
+    const loadMembership = async () => {
+      // Check if current user is a member
+      const { data: membership } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('group_key', groupKey)
+        .maybeSingle();
+
+      setIsMember(!!membership);
+
+      // Load all members of this group via group_members joined with profiles
+      const { data: groupMemberRows } = await supabase
+        .from('group_members')
+        .select('profiles(id, display_name)')
+        .eq('group_key', groupKey);
+
+      if (groupMemberRows) {
+        const memberList: Member[] = (groupMemberRows as GroupMemberRow[])
+          .flatMap((row) => {
+            const p = row.profiles;
+            if (!p) return [];
+            return Array.isArray(p) ? p : [p];
+          })
+          .filter((p): p is Member => !!p && !!p.display_name);
+        setMembers(memberList);
+      }
+    };
+
+    loadMembership();
+  }, [user, groupKey]);
 
   // Load initial messages
   useEffect(() => {
@@ -139,6 +170,49 @@ export default function CategoryChatPage({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleJoinGroup = async () => {
+    if (!user || joiningGroup) return;
+    setJoiningGroup(true);
+
+    const { error } = await supabase
+      .from('group_members')
+      .insert({ user_id: user.id, group_key: groupKey });
+
+    if (error && error.code !== '23505') {
+      // Ignore duplicate key errors (23505) — user may have already joined; treat as success
+      console.error('Failed to join group:', error);
+      setJoiningGroup(false);
+      return;
+    }
+
+    setIsMember(true);
+    // Add current user to members list optimistically
+    if (userProfile) {
+      setMembers((prev) => {
+        if (prev.some((m) => m.id === user.id)) return prev;
+        return [...prev, { id: user.id, display_name: userProfile.display_name }];
+      });
+    }
+    setJoiningGroup(false);
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('group_key', groupKey);
+
+    if (error) {
+      console.error('Failed to leave group:', error);
+      return;
+    }
+
+    router.push(`/groups/${decodedCategory}`);
+  };
 
   const handleSendMessage = async (content: string) => {
     if (!user || !userProfile) return;
@@ -198,6 +272,15 @@ export default function CategoryChatPage({
             </p>
           </div>
           <MembersPanel members={members} />
+          {isMember && (
+            <button
+              onClick={() => setShowLeaveConfirm(true)}
+              title="Leave group"
+              className="text-gray-400 hover:text-red-500 transition-colors text-xl px-1"
+            >
+              🚪
+            </button>
+          )}
           <button
             onClick={() => router.push(`/groups/${decodedCategory}`)}
             className="text-red-600 hover:text-red-700 font-medium text-sm whitespace-nowrap"
@@ -206,6 +289,32 @@ export default function CategoryChatPage({
           </button>
         </div>
       </div>
+
+      {/* Leave Group Confirmation Modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Leave this group?</h2>
+            <p className="text-gray-600 text-sm mb-6">
+              Are you sure you want to leave this group? You can always rejoin later.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLeaveGroup}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Leave Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto bg-gray-50 px-3 sm:px-4 py-4">
@@ -258,8 +367,22 @@ export default function CategoryChatPage({
             </a>{' '}
             to send messages.
           </div>
-        ) : (
+        ) : isMember === false ? (
+          <div className="p-4 bg-blue-50 border-t text-center text-blue-800">
+            <p className="mb-2">Join this group to start chatting.</p>
+            <button
+              onClick={handleJoinGroup}
+              disabled={joiningGroup}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {joiningGroup ? 'Joining...' : 'Join Group'}
+            </button>
+          </div>
+        ) : isMember === true ? (
           <ChatInput onSendMessage={handleSendMessage} />
+        ) : (
+          // isMember is null (still loading membership status)
+          <div className="p-4 border-t text-center text-gray-400 text-sm">Checking membership...</div>
         )}
       </div>
 
