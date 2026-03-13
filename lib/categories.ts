@@ -41,6 +41,11 @@ export function getCategoryShortLabel(value: string): string | null {
   return PR_CATEGORIES.find((c) => c.value === value)?.shortLabel ?? null;
 }
 
+/** Build the group_month key for category-scoped chats: "category:month" */
+export function buildGroupKey(category: string, month: string): string {
+  return `${category}:${month}`;
+}
+
 /** Format a DATE string "yyyy-mm-dd" -> "dd.mm.yyyy" */
 export function formatStepDate(dateStr: string | null | undefined): string {
   if (!dateStr) return 'Pending';

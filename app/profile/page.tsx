@@ -64,7 +64,7 @@ export default function ProfilePage() {
     setSuccess('');
 
     // Determine latest step for backwards-compatible application_status
-    const latestStep = JOURNEY_STEPS.slice().reverse().find((s) => stepDates[s]);
+    const latestStep = [...JOURNEY_STEPS].reverse().find((s) => stepDates[s]);
     const applicationStatus = latestStep
       ? `${latestStep} (${stepDates[latestStep]})`
       : '';

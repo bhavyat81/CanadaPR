@@ -91,7 +91,7 @@ export default function UserProfileModal({ userId, isOpen, onClose }: UserProfil
             ) : (
               <>
                 <h2 className="text-lg font-bold text-gray-800 truncate">
-                  @{profile?.display_name ?? 'Unknown User'}&#39;s PR Journey
+                  @{profile?.display_name ?? 'Unknown User'}&apos;s PR Journey
                 </h2>
                 {categoryLabel && (
                   <p className="text-sm text-gray-500 mt-0.5">{categoryLabel}</p>

@@ -9,7 +9,7 @@ import ChatInput from '@/components/ChatInput';
 import UserProfileModal from '@/components/UserProfileModal';
 import MembersPanel from '@/components/MembersPanel';
 import { formatMonth } from '@/lib/months';
-import { getCategoryShortLabel } from '@/lib/categories';
+import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 
 // Maximum number of messages to load per chat room
 const MESSAGES_LIMIT = 100;
@@ -47,8 +47,8 @@ export default function CategoryChatPage({
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
 
-  // Combined group key: "category:month" (e.g., "express-entry-fsw:2025-11")
-  const groupKey = `${decodedCategory}:${decodedMonth}`;
+  // Combined group key using helper: "category:month" (e.g., "express-entry-fsw:2025-11")
+  const groupKey = buildGroupKey(decodedCategory, decodedMonth);
 
   const displayMonth = formatMonth(decodedMonth);
   const categoryShort = getCategoryShortLabel(decodedCategory) ?? decodedCategory;
