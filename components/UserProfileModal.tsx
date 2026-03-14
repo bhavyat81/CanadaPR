@@ -11,7 +11,6 @@ interface UserProfile {
   pr_month: string | null;
   pr_category: string | null;
   application_status: string | null;
-  remarks: string | null;
 }
 
 interface UserProfileModalProps {
@@ -40,7 +39,7 @@ export default function UserProfileModal({ userId, isOpen, onClose }: UserProfil
       const [profileResult, stepsResult] = await Promise.all([
         supabase
           .from('profiles')
-          .select('display_name, pr_month, pr_category, application_status, remarks')
+          .select('display_name, pr_month, pr_category, application_status')
           .eq('id', userId)
           .single(),
         supabase
@@ -132,12 +131,6 @@ export default function UserProfileModal({ userId, isOpen, onClose }: UserProfil
               journeySteps={journeySteps}
               applicationStatus={profile?.application_status ?? ''}
             />
-            {profile?.remarks && (
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Remarks</p>
-                <p className="text-sm text-gray-700">{profile.remarks}</p>
-              </div>
-            )}
           </>
         )}
       </div>
