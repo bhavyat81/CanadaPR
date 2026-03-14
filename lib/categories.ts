@@ -1,4 +1,13 @@
-export const PR_CATEGORIES = [
+// --- Category Type ---
+export type PRCategory = {
+  value: string;
+  label: string;
+  description: string;
+  icon: string;
+};
+
+// --- Categories Array ---
+export const PR_CATEGORIES: PRCategory[] = [
   {
     value: "ee-fsw",
     label: "EE - FSW",
@@ -80,8 +89,9 @@ export const PR_CATEGORIES = [
   },
 ];
 
-// Dummy/legacy exports to prevent import errors:
-export const JOURNEY_STEPS = [];
+// --- Legacy/Required Exports for Build Compatibility ---
+export const JOURNEY_STEPS: any[] = [];
+// Use unknown[] + _args to silence ESLint and TS all at once
 export function buildGroupKey(..._args: unknown[]): string { return ""; }
 export function getCategoryShortLabel(..._args: unknown[]): string { return ""; }
 export function getCategoryLabel(..._args: unknown[]): string { return ""; }
