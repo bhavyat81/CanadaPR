@@ -5,11 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../components/AuthProvider";
 
-type GroupsByCategoryPageProps = {
-  params: { category: string }
-};
-
-export default function GroupsByCategoryPage({ params }: GroupsByCategoryPageProps) {
+export default function GroupsByCategoryPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
@@ -31,7 +27,6 @@ export default function GroupsByCategoryPage({ params }: GroupsByCategoryPagePro
     const loadData = async () => {
       setLoadingData(true);
 
-      // Only fetch merged group keys
       const { data: groupMemberRows } = await supabase
         .from("group_members")
         .select("group_key")
@@ -48,7 +43,6 @@ export default function GroupsByCategoryPage({ params }: GroupsByCategoryPagePro
         setMemberCounts(counts);
       }
 
-      // Which merged groups user has joined
       const { data: userMemberships } = await supabase
         .from("group_members")
         .select("group_key")
@@ -71,7 +65,6 @@ export default function GroupsByCategoryPage({ params }: GroupsByCategoryPagePro
     if (!user) return;
     const key = `pnp/non-express-entry:${month}`;
 
-    // Optimistic update
     setJoinedGroups((prev) => new Set([...prev, key]));
     setMemberCounts((prev) => ({
       ...prev,
@@ -83,7 +76,6 @@ export default function GroupsByCategoryPage({ params }: GroupsByCategoryPagePro
       .insert({ user_id: user.id, group_key: key });
 
     if (error && error.code !== "23505") {
-      // Rollback optimistic update on error (ignore duplicate key errors)
       setJoinedGroups((prev) => {
         const next = new Set(prev);
         next.delete(key);
@@ -97,7 +89,6 @@ export default function GroupsByCategoryPage({ params }: GroupsByCategoryPagePro
       return;
     }
 
-    // Go to chat after joining
     router.push(`/chat/pnp/non-express-entry/${month}`);
   };
 
@@ -109,7 +100,6 @@ export default function GroupsByCategoryPage({ params }: GroupsByCategoryPagePro
     );
   }
 
-  // Build month list from merged group keys
   const months = Object.keys(memberCounts).sort();
 
   return (
