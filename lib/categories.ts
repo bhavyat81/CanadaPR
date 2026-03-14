@@ -1,7 +1,7 @@
 export type PRCategory = {
   value: string;
   label: string;
-  shortLabel: string; // <-- add this
+  shortLabel: string;
   description: string;
   icon: string;
 };
@@ -107,9 +107,24 @@ export const PR_CATEGORIES: PRCategory[] = [
   },
 ];
 
-// --- Legacy/Required Exports for Build Compatibility ---
+// --- Journey Steps ---
 export const JOURNEY_STEPS: string[] = [];
-export function buildGroupKey(..._args: unknown[]): string { return ""; }
-export function getCategoryShortLabel(..._args: unknown[]): string { return ""; }
-export function getCategoryLabel(..._args: unknown[]): string { return ""; }
-export function formatStepDate(..._args: unknown[]): string { return ""; }
+
+// --- Group Key Helpers ---
+export function buildGroupKey(category: string, month: string): string {
+  return `${category}:${month}`;
+}
+
+export function getCategoryShortLabel(category: string): string {
+  const cat = PR_CATEGORIES.find((c) => c.value === category);
+  return cat?.shortLabel ?? category;
+}
+
+export function getCategoryLabel(category: string): string {
+  const cat = PR_CATEGORIES.find((c) => c.value === category);
+  return cat?.label ?? category;
+}
+
+export function formatStepDate(date: string): string {
+  return date;
+}
