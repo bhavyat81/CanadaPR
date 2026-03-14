@@ -46,7 +46,7 @@ export default function GroupCard({ month, displayName, memberCount, isUserGroup
             onClick={onJoin}
             className="inline-flex items-center text-sm text-red-600 font-medium hover:text-red-700"
           >
-            Join Group
+            Join Group Chat
           </button>
         )}
       </div>

@@ -5,11 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import GroupCard from "@/components/GroupCard";
-import { formatMonth } from "@/lib/months";
+import { formatMonth, generateMonths } from "@/lib/months";
 import { PR_CATEGORIES } from "@/lib/categories";
-
-// PNP and Non-EE share a merged group view
-const MERGED_CATEGORIES = ["pnp", "non-ee"];
 
 export default function GroupsByCategoryPage({
   params,
@@ -27,7 +24,6 @@ export default function GroupsByCategoryPage({
   const [loadingData, setLoadingData] = useState(true);
 
   const decodedCategory = decodeURIComponent(category);
-  const isMergedView = MERGED_CATEGORIES.includes(decodedCategory);
 
   const categoryInfo = PR_CATEGORIES.find((c) => c.value === decodedCategory);
 
@@ -53,28 +49,23 @@ export default function GroupsByCategoryPage({
       setUserPrMonth(profile?.pr_month ?? null);
       setUserPrCategory(profile?.pr_category ?? null);
 
-      // Load group members for all relevant categories
-      const cats = MERGED_CATEGORIES.includes(decodedCategory)
-        ? MERGED_CATEGORIES
-        : [decodedCategory];
-      let allRows: { group_key: string }[] = [];
-      for (const cat of cats) {
-        const { data } = await supabase
-          .from("group_members")
-          .select("group_key")
-          .like("group_key", `${cat}:%`);
-        if (data) allRows = allRows.concat(data);
-      }
+      // Load group members for this category
+      const { data } = await supabase
+        .from("group_members")
+        .select("group_key")
+        .like("group_key", `${decodedCategory}:%`);
 
-      // Count members per month (aggregate across merged categories)
+      // Count members per month
       const counts: Record<string, number> = {};
-      allRows.forEach(({ group_key }) => {
-        const colonIdx = group_key.indexOf(":");
-        if (colonIdx !== -1) {
-          const month = group_key.slice(colonIdx + 1);
-          counts[month] = (counts[month] || 0) + 1;
-        }
-      });
+      if (data) {
+        data.forEach(({ group_key }) => {
+          const colonIdx = group_key.indexOf(":");
+          if (colonIdx !== -1) {
+            const month = group_key.slice(colonIdx + 1);
+            counts[month] = (counts[month] || 0) + 1;
+          }
+        });
+      }
       setMemberCounts(counts);
 
       // Load all of the user's joined groups
@@ -92,18 +83,9 @@ export default function GroupsByCategoryPage({
     loadData();
   }, [user, decodedCategory]);
 
-  // Determine which category key to use when joining/chatting for a given month
-  const resolveJoinCategory = (): string => {
-    if (isMergedView && userPrCategory && MERGED_CATEGORIES.includes(userPrCategory)) {
-      return userPrCategory;
-    }
-    return decodedCategory;
-  };
-
   const handleJoin = async (month: string) => {
     if (!user) return;
-    const joinCategory = resolveJoinCategory();
-    const key = `${joinCategory}:${month}`;
+    const key = `${decodedCategory}:${month}`;
 
     setJoinedGroups((prev) => new Set([...prev, key]));
     setMemberCounts((prev) => ({
@@ -129,26 +111,7 @@ export default function GroupsByCategoryPage({
       return;
     }
 
-    router.push(`/chat/${joinCategory}/${month}`);
-  };
-
-  // Whether the user has joined a group for this month (checking all merged categories)
-  const isMonthJoined = (month: string): boolean => {
-    if (isMergedView) {
-      return MERGED_CATEGORIES.some((cat) => joinedGroups.has(`${cat}:${month}`));
-    }
-    return joinedGroups.has(`${decodedCategory}:${month}`);
-  };
-
-  // Determine the category to use for the chat link (the one the user actually joined)
-  const getChatCategory = (month: string): string => {
-    if (isMergedView) {
-      for (const cat of MERGED_CATEGORIES) {
-        if (joinedGroups.has(`${cat}:${month}`)) return cat;
-      }
-      return resolveJoinCategory();
-    }
-    return decodedCategory;
+    router.push(`/chat/${decodedCategory}/${month}`);
   };
 
   if (authLoading || loadingData) {
@@ -159,13 +122,10 @@ export default function GroupsByCategoryPage({
     );
   }
 
-  // Months are stored as "YYYY-MM" strings; lexicographic sort is chronologically correct.
-  // Sort descending (newest first) so the most recent groups appear at the top.
-  const months = Object.keys(memberCounts).sort((a, b) => b.localeCompare(a));
+  // Always show all months from Jan 2025 to Dec 2026
+  const allMonths = generateMonths();
 
-  const pageTitle = isMergedView
-    ? "PNP / Non-Express Entry Groups"
-    : categoryInfo
+  const pageTitle = categoryInfo
     ? `${categoryInfo.label} Groups`
     : `${decodedCategory} Groups`;
 
@@ -181,35 +141,22 @@ export default function GroupsByCategoryPage({
           </button>
         </div>
         <h1 className="text-2xl font-bold text-gray-800 mb-6">{pageTitle}</h1>
-        {months.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">👥</div>
-            <h3 className="text-lg font-semibold text-gray-700">No groups yet</h3>
-            <p className="text-gray-500 mt-2">
-              Be the first to join a group for this category!
-            </p>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {months.map((month) => (
-              <GroupCard
-                key={month}
-                month={month}
-                displayName={formatMonth(month)}
-                memberCount={memberCounts[month]}
-                isUserGroup={
-                  month === userPrMonth &&
-                  (isMergedView
-                    ? MERGED_CATEGORIES.includes(userPrCategory ?? "")
-                    : userPrCategory === decodedCategory)
-                }
-                category={getChatCategory(month)}
-                isJoined={isMonthJoined(month)}
-                onJoin={() => handleJoin(month)}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {allMonths.map(({ value: month }) => (
+            <GroupCard
+              key={month}
+              month={month}
+              displayName={formatMonth(month)}
+              memberCount={memberCounts[month] || 0}
+              isUserGroup={
+                month === userPrMonth && userPrCategory === decodedCategory
+              }
+              category={decodedCategory}
+              isJoined={joinedGroups.has(`${decodedCategory}:${month}`)}
+              onJoin={() => handleJoin(month)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

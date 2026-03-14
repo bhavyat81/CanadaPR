@@ -29,13 +29,6 @@ export const PR_CATEGORIES: PRCategory[] = [
     icon: "🍁",
   },
   {
-    value: "non-ee",
-    label: "Non-EE",
-    shortLabel: "Non-EE",
-    description: "Non-Express Entry",
-    icon: "🍁",
-  },
-  {
     value: "pnp",
     label: "PNP",
     shortLabel: "PNP",
@@ -108,7 +101,16 @@ export const PR_CATEGORIES: PRCategory[] = [
 ];
 
 // --- Journey Steps ---
-export const JOURNEY_STEPS: string[] = [];
+export const JOURNEY_STEPS: string[] = [
+  "AOR",
+  "Biometrics",
+  "Medical",
+  "Additional Documents",
+  "Background Check",
+  "Decision Made",
+  "PPR",
+  "COPR",
+];
 
 // --- Group Key Helpers ---
 export function buildGroupKey(category: string, month: string): string {
@@ -125,6 +127,12 @@ export function getCategoryLabel(category: string): string {
   return cat?.label ?? category;
 }
 
+/** Format a date string from "YYYY-MM-DD" to "dd.mm.yyyy". Returns the input unchanged for unrecognised formats. */
 export function formatStepDate(date: string): string {
+  const parts = date.split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day}.${month}.${year}`;
+  }
   return date;
 }
