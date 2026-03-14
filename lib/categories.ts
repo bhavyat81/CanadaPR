@@ -90,7 +90,7 @@ export const PR_CATEGORIES: PRCategory[] = [
 ];
 
 // --- Legacy/Required Exports for Build Compatibility ---
-export const JOURNEY_STEPS: unknown[] = [];
+export const JOURNEY_STEPS: string[] = [];
 export function buildGroupKey(..._args: unknown[]): string { return ""; }
 export function getCategoryShortLabel(..._args: unknown[]): string { return ""; }
 export function getCategoryLabel(..._args: unknown[]): string { return ""; }
