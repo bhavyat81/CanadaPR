@@ -32,9 +32,9 @@ export default function StatusTimeline({ journeySteps, applicationStatus }: Stat
             <span className={`text-sm ${done ? 'text-gray-800 font-medium' : 'text-gray-400'}`}>
               {step}
               {done && (
-                <span className="ml-2 text-gray-500 font-normal">— {formatStepDate(date)}</span>
+                <span className="ml-2 text-gray-500 font-normal">- {formatStepDate(date ?? '')}</span>
               )}
-              {!done && <span className="ml-2 text-gray-400 font-normal">— Pending</span>}
+              {!done && <span className="ml-2 text-gray-400 font-normal">- Pending</span>}
             </span>
           </div>
         );
