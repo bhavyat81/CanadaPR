@@ -1,45 +1,42 @@
-'use client';
+// app/groups/[category]/page.tsx
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/components/AuthProvider';
-import GroupCard from '@/components/GroupCard';
-import { generateMonths } from '@/lib/months';
-import { PR_CATEGORIES, getCategoryLabel, buildGroupKey } from '@/lib/categories';
+"use client";
 
-const ALL_MONTHS = generateMonths();
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/lib/auth";
+import { PR_CATEGORIES } from "@/constants";
+import type { MemberCounts } from "@/types";
 
-interface MemberCounts {
-  [month: string]: number;
-}
+export default function GroupsByCategoryPage({ params }) {
+  const { category: encodedCategory } = params;
+  const decodedCategory = decodeURIComponent(encodedCategory || "");
 
-export default function CategoryGroupsPage({ params }: { params: Promise<{ category: string }> }) {
-  const { category } = use(params);
-  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<{ pr_month: string; pr_category: string } | null>(null);
+  const { user, authLoading } = useAuth();
+
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [memberCounts, setMemberCounts] = useState<MemberCounts>({});
   const [joinedGroups, setJoinedGroups] = useState<Set<string>>(new Set());
   const [loadingData, setLoadingData] = useState(true);
 
-  const decodedCategory = decodeURIComponent(category);
-  const categoryLabel = getCategoryLabel(decodedCategory);
   const categoryData = PR_CATEGORIES.find((c) => c.value === decodedCategory);
 
   // Redirect if not logged in or invalid category
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!categoryData) {
-      router.push('/groups');
+      router.push("/groups");
     }
   }, [categoryData, router]);
 
+  // THIS IS THE ONLY PLACE GROUPS ARE FETCHED AND NOW ONLY MERGED GROUPS ARE INCLUDED!
   useEffect(() => {
     if (!user) return;
 
@@ -48,24 +45,24 @@ export default function CategoryGroupsPage({ params }: { params: Promise<{ categ
 
       // Load user profile to highlight their month
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('pr_month, pr_category')
-        .eq('id', user.id)
+        .from("profiles")
+        .select("pr_month, pr_category")
+        .eq("id", user.id)
         .single();
 
       setUserProfile(profile);
 
-      // Load member counts from group_members for this category
+      // ONLY LOAD MERGED GROUPS
       const { data: groupMemberRows } = await supabase
-        .from('group_members')
-        .select('group_key')
-        .like('group_key', `${decodedCategory}:%`);
+        .from("group_members")
+        .select("group_key")
+        .like("group_key", "pnp/non-express-entry:%");
 
       if (groupMemberRows) {
         const counts: MemberCounts = {};
         groupMemberRows.forEach(({ group_key }) => {
-          // group_key format: "category:month"
-          const monthPart = group_key.split(':').slice(1).join(':');
+          // group_key format: "pnp/non-express-entry:YYYY-MM"
+          const monthPart = group_key.split(":").slice(1).join(":");
           if (monthPart) {
             counts[monthPart] = (counts[monthPart] || 0) + 1;
           }
@@ -73,12 +70,12 @@ export default function CategoryGroupsPage({ params }: { params: Promise<{ categ
         setMemberCounts(counts);
       }
 
-      // Load which groups the current user has joined in this category
+      // Load which merged groups the current user has joined
       const { data: userMemberships } = await supabase
-        .from('group_members')
-        .select('group_key')
-        .eq('user_id', user.id)
-        .like('group_key', `${decodedCategory}:%`);
+        .from("group_members")
+        .select("group_key")
+        .eq("user_id", user.id)
+        .like("group_key", "pnp/non-express-entry:%");
 
       if (userMemberships) {
         setJoinedGroups(new Set(userMemberships.map((m) => m.group_key)));
@@ -88,34 +85,40 @@ export default function CategoryGroupsPage({ params }: { params: Promise<{ categ
     };
 
     loadData();
-  }, [user, decodedCategory]);
+  }, [user]);
 
   const handleJoin = async (month: string) => {
     if (!user) return;
-    const key = buildGroupKey(decodedCategory, month);
+    const key = `pnp/non-express-entry:${month}`;
 
     // Optimistic update
     setJoinedGroups((prev) => new Set([...prev, key]));
-    setMemberCounts((prev) => ({ ...prev, [month]: (prev[month] || 0) + 1 }));
+    setMemberCounts((prev) => ({
+      ...prev,
+      [month]: (prev[month] || 0) + 1,
+    }));
 
     const { error } = await supabase
-      .from('group_members')
+      .from("group_members")
       .insert({ user_id: user.id, group_key: key });
 
-    if (error && error.code !== '23505') {
-      // Rollback optimistic update on error (ignore duplicate key errors — user may already be a member)
+    if (error && error.code !== "23505") {
+      // Rollback optimistic update on error (ignore duplicate key errors)
       setJoinedGroups((prev) => {
         const next = new Set(prev);
         next.delete(key);
         return next;
       });
-      setMemberCounts((prev) => ({ ...prev, [month]: Math.max((prev[month] || 1) - 1, 0) }));
-      console.error('Failed to join group:', error);
+      setMemberCounts((prev) => ({
+        ...prev,
+        [month]: Math.max((prev[month] || 1) - 1, 0),
+      }));
+      console.error("Failed to join group:", error);
       return;
     }
 
     // Navigate to chat after joining
-    router.push(`/chat/${decodedCategory}/${month}`);
+    router.push(`/chat/pnp/non-express-entry/${month}`);
   };
 
   if (authLoading || loadingData) {
@@ -130,42 +133,46 @@ export default function CategoryGroupsPage({ params }: { params: Promise<{ categ
     return null;
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <button
-            onClick={() => router.push('/groups')}
-            className="text-red-600 hover:text-red-700 font-medium text-sm mb-4 flex items-center gap-1"
-          >
-            ← All Categories
-          </button>
-          <h1 className="text-3xl font-bold text-gray-800">{categoryLabel}</h1>
-          <p className="text-gray-600 mt-2">
-            Select your application month to join the group chat
-          </p>
-        </div>
+  // Build the month list from the merged group keys
+  const months = Object.keys(memberCounts).sort();
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {ALL_MONTHS.map(({ value, label }) => {
-            const key = buildGroupKey(decodedCategory, value);
-            return (
-              <GroupCard
-                key={value}
-                month={value}
-                displayName={label}
-                memberCount={memberCounts[value] || 0}
-                isUserGroup={
-                  userProfile?.pr_category === decodedCategory &&
-                  userProfile?.pr_month === value
-                }
-                category={decodedCategory}
-                isJoined={joinedGroups.has(key)}
-                onJoin={() => handleJoin(value)}
-              />
-            );
-          })}
-        </div>
+  return (
+    <div className="min-h-screen bg-gray-50 py-6 px-4">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-2xl font-semibold mb-4">PNP / Non-Express Entry Groups</h1>
+        <ul>
+          {months.length === 0 && (
+            <li className="text-gray-400">No merged groups found.</li>
+          )}
+          {months.map((month) => (
+            <li
+              key={month}
+              className="mb-4 p-4 rounded border bg-white flex justify-between items-center"
+            >
+              <div>
+                <div className="font-medium text-lg">{month}</div>
+                <div className="text-sm text-gray-500">
+                  {memberCounts[month]} members
+                </div>
+              </div>
+              {joinedGroups.has(`pnp/non-express-entry:${month}`) ? (
+                <button
+                  className="bg-green-100 text-green-700 px-3 py-1 rounded text-sm"
+                  disabled
+                >
+                  Joined
+                </button>
+              ) : (
+                <button
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                  onClick={() => handleJoin(month)}
+                >
+                  Join
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
