@@ -7,12 +7,11 @@ import { useAuth } from "../../../components/AuthProvider";
 
 export default function GroupsByCategoryPage({ params }) {
   const { category: encodedCategory } = params;
-  const decodedCategory = decodeURIComponent(encodedCategory || "");
+  // Removed: decodedCategory (was unused)
 
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
-  const [userProfile, setUserProfile] = useState(null);
   const [memberCounts, setMemberCounts] = useState({});
   const [joinedGroups, setJoinedGroups] = useState(new Set());
   const [loadingData, setLoadingData] = useState(true);
@@ -30,15 +29,6 @@ export default function GroupsByCategoryPage({ params }) {
 
     const loadData = async () => {
       setLoadingData(true);
-
-      // Load user profile for possible highlight (optional)
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("pr_month, pr_category")
-        .eq("id", user.id)
-        .single();
-
-      setUserProfile(profile);
 
       // Only fetch merged group keys
       const { data: groupMemberRows } = await supabase
