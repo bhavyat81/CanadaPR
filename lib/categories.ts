@@ -79,3 +79,10 @@ export const PR_CATEGORIES = [
     icon: "🌐",
   },
 ];
+
+// Dummy/legacy exports to prevent import errors:
+export const JOURNEY_STEPS = [];
+export function buildGroupKey(...args: any[]): string { return ""; }
+export function getCategoryShortLabel(...args: any[]): string { return ""; }
+export function getCategoryLabel(...args: any[]): string { return ""; }
+export function formatStepDate(...args: any[]): string { return ""; }
