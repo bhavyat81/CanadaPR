@@ -1,13 +1,11 @@
-// app/groups/[category]/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { useAuth } from "@/lib/auth";
-import { PR_CATEGORIES } from "@/constants";
-import type { MemberCounts } from "@/types";
+import { supabase } from "../../../lib/supabaseClient";
+import { useAuth } from "../../../lib/auth";
+import { PR_CATEGORIES } from "../../../constants";
+import type { MemberCounts } from "../../../types";
 
 export default function GroupsByCategoryPage({ params }) {
   const { category: encodedCategory } = params;
