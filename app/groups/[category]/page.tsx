@@ -12,7 +12,7 @@ export default function GroupsByCategoryPage({ params }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [memberCounts, setMemberCounts] = useState({});
   const [joinedGroups, setJoinedGroups] = useState(new Set());
   const [loadingData, setLoadingData] = useState(true);
@@ -24,14 +24,14 @@ export default function GroupsByCategoryPage({ params }) {
     }
   }, [user, authLoading, router]);
 
-  // ONLY LOAD MERGED GROUPS (as per your requirements)
+  // ONLY LOAD MERGED GROUPS
   useEffect(() => {
     if (!user) return;
 
     const loadData = async () => {
       setLoadingData(true);
 
-      // Load user profile
+      // Load user profile for possible highlight (optional)
       const { data: profile } = await supabase
         .from("profiles")
         .select("pr_month, pr_category")
@@ -40,7 +40,7 @@ export default function GroupsByCategoryPage({ params }) {
 
       setUserProfile(profile);
 
-      // Only merged groups fetch (pnp/non-express-entry)
+      // Only fetch merged group keys
       const { data: groupMemberRows } = await supabase
         .from("group_members")
         .select("group_key")
@@ -57,7 +57,7 @@ export default function GroupsByCategoryPage({ params }) {
         setMemberCounts(counts);
       }
 
-      // Load which merged groups the current user has joined
+      // Which merged groups user has joined
       const { data: userMemberships } = await supabase
         .from("group_members")
         .select("group_key")
@@ -104,7 +104,7 @@ export default function GroupsByCategoryPage({ params }) {
       return;
     }
 
-    // Navigate to chat after joining
+    // Go to chat after joining
     router.push(`/chat/pnp/non-express-entry/${month}`);
   };
 
@@ -116,7 +116,7 @@ export default function GroupsByCategoryPage({ params }) {
     );
   }
 
-  // Build the month list from the merged group keys
+  // Build month list from merged group keys
   const months = Object.keys(memberCounts).sort();
 
   return (
