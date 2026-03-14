@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -54,7 +55,9 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="text-4xl mb-2">🇨🇦</div>
+          <div className="flex justify-center mb-4">
+            <Image src="/logo.png" alt="Canada PR Chat" width={96} height={96} className="rounded-2xl shadow-lg" />
+          </div>
           <h1 className="text-2xl font-bold text-gray-800">Create Account</h1>
           <p className="text-gray-500 mt-1">Join Canada PR Chat today</p>
         </div>

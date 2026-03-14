@@ -33,8 +33,8 @@ export default function Home() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-red-600 to-red-800 text-white py-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="flex justify-center mb-6">
-            <Image src="/logo.svg" alt="Canada PR Chat" width={96} height={96} className="rounded-2xl shadow-lg" />
+          <div className="flex justify-center mb-8">
+            <Image src="/logo.png" alt="Canada PR Chat" width={144} height={144} className="rounded-3xl shadow-2xl" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Canada PR Chat
