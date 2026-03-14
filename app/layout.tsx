@@ -8,14 +8,14 @@ export const metadata: Metadata = {
   title: 'Canada PR Chat',
   description: 'Connect with fellow Canada PR applicants who applied in the same month as you',
   icons: {
-    icon: '/logo.svg',
-    shortcut: '/logo.svg',
-    apple: '/logo.svg',
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
   },
   openGraph: {
     title: 'Canada PR Chat',
     description: 'Connect with fellow Canada PR applicants who applied in the same month as you',
-    images: [{ url: '/logo.svg', width: 512, height: 512, alt: 'Canada PR Chat' }],
+    images: [{ url: '/logo.png', width: 512, height: 512, alt: 'Canada PR Chat' }],
   },
 };
 
