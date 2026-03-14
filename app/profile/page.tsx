@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { generateMonths } from '@/lib/months';
-import { PR_CATEGORIES, JOURNEY_STEPS } from '@/lib/categories';
+import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, formatStepDate } from '@/lib/categories';
 
 const PR_MONTHS = generateMonths();
 
@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [prStream, setPrStream] = useState('');
   const [prCategory, setPrCategory] = useState('');
   const [stepDates, setStepDates] = useState<Record<string, string>>({});
-  const [remarks, setRemarks] = useState('');
+  const [activeStep, setActiveStep] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -43,7 +43,6 @@ export default function ProfilePage() {
         setPrMonth(data.pr_month || '');
         setPrStream(data.pr_stream || '');
         setPrCategory(data.pr_category || '');
-        setRemarks(data.remarks || '');
       }
 
       if (!stepsResult.error && stepsResult.data) {
@@ -78,7 +77,6 @@ export default function ProfilePage() {
       pr_stream: prStream,
       pr_category: prCategory,
       application_status: applicationStatus,
-      remarks: remarks,
       updated_at: new Date().toISOString(),
     });
 
@@ -191,47 +189,48 @@ export default function ProfilePage() {
           {/* Journey Step Dates */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              PR Journey Dates <span className="text-gray-400 font-normal">(optional — fill in dates you have received)</span>
+              PR Journey Milestones <span className="text-gray-400 font-normal">(tap a milestone to set its date)</span>
             </label>
-            <div className="space-y-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <div className="flex flex-col divide-y divide-gray-100 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
               {JOURNEY_STEPS.map((step) => (
-                <div key={step} className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-gray-600">{step}</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      value={stepDates[step] || ''}
-                      onChange={(e) => handleStepDate(step, e.target.value)}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
-                    {stepDates[step] && (
-                      <button
-                        type="button"
-                        onClick={() => handleStepDate(step, '')}
-                        className="text-gray-400 hover:text-gray-600 text-sm"
-                        aria-label={`Clear ${step} date`}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
+                <div key={step}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep(activeStep === step ? null : step)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-base w-6 text-center">{JOURNEY_STEP_EMOJIS[step] ?? '📌'}</span>
+                      <span className="text-sm text-gray-800">{step}</span>
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2 shrink-0">
+                      {stepDates[step] ? formatStepDate(stepDates[step]) : <span className="text-gray-300">—</span>}
+                    </span>
+                  </button>
+                  {activeStep === step && (
+                    <div className="px-4 pb-3 pt-1 flex items-center gap-2 bg-white border-t border-gray-100">
+                      <input
+                        type="date"
+                        value={stepDates[step] || ''}
+                        onChange={(e) => handleStepDate(step, e.target.value)}
+                        autoFocus
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      />
+                      {stepDates[step] && (
+                        <button
+                          type="button"
+                          onClick={() => handleStepDate(step, '')}
+                          className="text-gray-400 hover:text-red-500 text-sm"
+                          aria-label={`Clear ${step} date`}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Remarks */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Remarks <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-              placeholder="Any additional notes about your application..."
-            />
           </div>
 
           <button

@@ -122,6 +122,27 @@ export const JOURNEY_STEPS: string[] = [
   "PR Card",
 ];
 
+export const JOURNEY_STEP_EMOJIS: Record<string, string> = {
+  "AOR": "📄",
+  "BIL Date": "📋",
+  "ADR (If Any) / Return Date": "📎",
+  "Biometrics Completed": "🧬",
+  "Medical Completed": "🩺",
+  "Medical Date (Outland)": "🏥",
+  "PVO (Inland)": "🔍",
+  "SVO (Inland)": "📝",
+  "PAL": "✈️",
+  "Info Sharing": "🔗",
+  "Criminality": "🔎",
+  "Security": "🛡️",
+  "Final Decision": "⚖️",
+  "P1": "📨",
+  "P2": "📩",
+  "PPR": "@",
+  "ECOPR": "🎉",
+  "PR Card": "🏆",
+};
+
 // --- Group Key Helpers ---
 export function buildGroupKey(category: string, month: string): string {
   return `${category}:${month}`;
