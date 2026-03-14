@@ -90,8 +90,7 @@ export const PR_CATEGORIES: PRCategory[] = [
 ];
 
 // --- Legacy/Required Exports for Build Compatibility ---
-export const JOURNEY_STEPS: any[] = [];
-// Use unknown[] + _args to silence ESLint and TS all at once
+export const JOURNEY_STEPS: unknown[] = [];
 export function buildGroupKey(..._args: unknown[]): string { return ""; }
 export function getCategoryShortLabel(..._args: unknown[]): string { return ""; }
 export function getCategoryLabel(..._args: unknown[]): string { return ""; }
