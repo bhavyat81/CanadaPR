@@ -1,22 +1,6 @@
 import Link from 'next/link';
 import { PRCategory } from '@/lib/categories';
 
-const CATEGORY_EMOJIS: Record<string, string> = {
-  'express-entry-fsw': '🎯',
-  'express-entry-fst': '🔧',
-  'express-entry-cec': '🍁',
-  'pnp': '🏛️',
-  'family-spousal': '💑',
-  'family-parent': '👨‍👩‍👧',
-  'aip': '🌊',
-  'rnip': '🌲',
-  'caregiver': '❤️',
-  'startup-visa': '🚀',
-  'quebec': '⚜️',
-  'self-employed': '💼',
-  'other': '🌐',
-};
-
 interface CategoryCardProps {
   category: PRCategory;
   memberCount: number;
@@ -24,8 +8,6 @@ interface CategoryCardProps {
 }
 
 export default function CategoryCard({ category, memberCount, isUserCategory }: CategoryCardProps) {
-  const emoji = CATEGORY_EMOJIS[category.value] || '🍁';
-
   return (
     <Link href={`/groups/${category.value}`}>
       <div
@@ -37,14 +19,11 @@ export default function CategoryCard({ category, memberCount, isUserCategory }: 
       >
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <span className="text-2xl flex-shrink-0">{emoji}</span>
+            <span className="text-2xl flex-shrink-0">{category.icon}</span>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-gray-800 leading-tight">
-                {category.shortLabel}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5 leading-tight line-clamp-2">
+              <h3 className="text-sm font-semibold text-gray-800 leading-tight line-clamp-2">
                 {category.label}
-              </p>
+              </h3>
             </div>
           </div>
           {isUserCategory && (
