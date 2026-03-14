@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../components/AuthProvider";
 
-export default function GroupsByCategoryPage({ params }) {
+// Add this type definition
+type GroupsByCategoryPageProps = {
+  params: { category: string }
+};
+
+export default function GroupsByCategoryPage({ params }: GroupsByCategoryPageProps) {
   const { category: encodedCategory } = params;
-  // Removed: decodedCategory (was unused)
 
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -37,8 +41,8 @@ export default function GroupsByCategoryPage({ params }) {
         .like("group_key", "pnp/non-express-entry:%");
 
       if (groupMemberRows) {
-        const counts = {};
-        groupMemberRows.forEach(({ group_key }) => {
+        const counts: Record<string, number> = {};
+        groupMemberRows.forEach(({ group_key }: any) => {
           const monthPart = group_key.split(":").slice(1).join(":");
           if (monthPart) {
             counts[monthPart] = (counts[monthPart] || 0) + 1;
@@ -55,7 +59,7 @@ export default function GroupsByCategoryPage({ params }) {
         .like("group_key", "pnp/non-express-entry:%");
 
       if (userMemberships) {
-        setJoinedGroups(new Set(userMemberships.map((m) => m.group_key)));
+        setJoinedGroups(new Set(userMemberships.map((m: any) => m.group_key)));
       }
 
       setLoadingData(false);
@@ -64,7 +68,7 @@ export default function GroupsByCategoryPage({ params }) {
     loadData();
   }, [user]);
 
-  const handleJoin = async (month) => {
+  const handleJoin = async (month: string) => {
     if (!user) return;
     const key = `pnp/non-express-entry:${month}`;
 
