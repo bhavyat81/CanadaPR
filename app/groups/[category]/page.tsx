@@ -2,46 +2,36 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../../../lib/supabaseClient";
-import { useAuth } from "../../../lib/auth";
-import { PR_CATEGORIES } from "../../../constants";
-import type { MemberCounts } from "../../../types";
+import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../components/AuthProvider";
 
 export default function GroupsByCategoryPage({ params }) {
   const { category: encodedCategory } = params;
   const decodedCategory = decodeURIComponent(encodedCategory || "");
 
   const router = useRouter();
-  const { user, authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [memberCounts, setMemberCounts] = useState<MemberCounts>({});
-  const [joinedGroups, setJoinedGroups] = useState<Set<string>>(new Set());
+  const [memberCounts, setMemberCounts] = useState({});
+  const [joinedGroups, setJoinedGroups] = useState(new Set());
   const [loadingData, setLoadingData] = useState(true);
 
-  const categoryData = PR_CATEGORIES.find((c) => c.value === decodedCategory);
-
-  // Redirect if not logged in or invalid category
+  // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (!categoryData) {
-      router.push("/groups");
-    }
-  }, [categoryData, router]);
-
-  // THIS IS THE ONLY PLACE GROUPS ARE FETCHED AND NOW ONLY MERGED GROUPS ARE INCLUDED!
+  // ONLY LOAD MERGED GROUPS (as per your requirements)
   useEffect(() => {
     if (!user) return;
 
     const loadData = async () => {
       setLoadingData(true);
 
-      // Load user profile to highlight their month
+      // Load user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("pr_month, pr_category")
@@ -50,16 +40,15 @@ export default function GroupsByCategoryPage({ params }) {
 
       setUserProfile(profile);
 
-      // ONLY LOAD MERGED GROUPS
+      // Only merged groups fetch (pnp/non-express-entry)
       const { data: groupMemberRows } = await supabase
         .from("group_members")
         .select("group_key")
         .like("group_key", "pnp/non-express-entry:%");
 
       if (groupMemberRows) {
-        const counts: MemberCounts = {};
+        const counts = {};
         groupMemberRows.forEach(({ group_key }) => {
-          // group_key format: "pnp/non-express-entry:YYYY-MM"
           const monthPart = group_key.split(":").slice(1).join(":");
           if (monthPart) {
             counts[monthPart] = (counts[monthPart] || 0) + 1;
@@ -85,7 +74,7 @@ export default function GroupsByCategoryPage({ params }) {
     loadData();
   }, [user]);
 
-  const handleJoin = async (month: string) => {
+  const handleJoin = async (month) => {
     if (!user) return;
     const key = `pnp/non-express-entry:${month}`;
 
@@ -125,10 +114,6 @@ export default function GroupsByCategoryPage({ params }) {
         <div className="text-gray-500">Loading groups...</div>
       </div>
     );
-  }
-
-  if (!categoryData) {
-    return null;
   }
 
   // Build the month list from the merged group keys
