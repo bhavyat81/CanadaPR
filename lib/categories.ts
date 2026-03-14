@@ -82,7 +82,7 @@ export const PR_CATEGORIES = [
 
 // Dummy/legacy exports to prevent import errors:
 export const JOURNEY_STEPS = [];
-export function buildGroupKey(...args: any[]): string { return ""; }
-export function getCategoryShortLabel(...args: any[]): string { return ""; }
-export function getCategoryLabel(...args: any[]): string { return ""; }
-export function formatStepDate(...args: any[]): string { return ""; }
+export function buildGroupKey(..._args: unknown[]): string { return ""; }
+export function getCategoryShortLabel(..._args: unknown[]): string { return ""; }
+export function getCategoryLabel(..._args: unknown[]): string { return ""; }
+export function formatStepDate(..._args: unknown[]): string { return ""; }
