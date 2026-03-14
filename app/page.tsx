@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
@@ -32,7 +33,9 @@ export default function Home() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-red-600 to-red-800 text-white py-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="text-6xl mb-6">🇨🇦</div>
+          <div className="flex justify-center mb-6">
+            <Image src="/logo.svg" alt="Canada PR Chat" width={96} height={96} className="rounded-2xl shadow-lg" />
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Canada PR Chat
           </h1>
