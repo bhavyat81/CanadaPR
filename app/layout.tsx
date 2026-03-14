@@ -7,6 +7,16 @@ import Navbar from '@/components/Navbar';
 export const metadata: Metadata = {
   title: 'Canada PR Chat',
   description: 'Connect with fellow Canada PR applicants who applied in the same month as you',
+  icons: {
+    icon: '/logo.svg',
+    shortcut: '/logo.svg',
+    apple: '/logo.svg',
+  },
+  openGraph: {
+    title: 'Canada PR Chat',
+    description: 'Connect with fellow Canada PR applicants who applied in the same month as you',
+    images: [{ url: '/logo.svg', width: 512, height: 512, alt: 'Canada PR Chat' }],
+  },
 };
 
 export const viewport: Viewport = {
