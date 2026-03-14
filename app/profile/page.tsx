@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const [prStream, setPrStream] = useState('');
   const [prCategory, setPrCategory] = useState('');
   const [stepDates, setStepDates] = useState<Record<string, string>>({});
+  const [remarks, setRemarks] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -42,6 +43,7 @@ export default function ProfilePage() {
         setPrMonth(data.pr_month || '');
         setPrStream(data.pr_stream || '');
         setPrCategory(data.pr_category || '');
+        setRemarks(data.remarks || '');
       }
 
       if (!stepsResult.error && stepsResult.data) {
@@ -76,6 +78,7 @@ export default function ProfilePage() {
       pr_stream: prStream,
       pr_category: prCategory,
       application_status: applicationStatus,
+      remarks: remarks,
       updated_at: new Date().toISOString(),
     });
 
@@ -192,28 +195,43 @@ export default function ProfilePage() {
             </label>
             <div className="space-y-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
               {JOURNEY_STEPS.map((step) => (
-                <div key={step} className="flex items-center gap-3">
-                  <span className="text-sm w-40 text-gray-700 flex-shrink-0">{step}</span>
-                  <input
-                    type="date"
-                    value={stepDates[step] || ''}
-                    onChange={(e) => handleStepDate(step, e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  />
-                  {stepDates[step] && (
-                    <button
-                      type="button"
-                      onClick={() => handleStepDate(step, '')}
-                      className="text-gray-400 hover:text-gray-600 text-sm"
-                      aria-label={`Clear ${step} date`}
-                    >
-                      ✕
-                    </button>
-                  )}
+                <div key={step} className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-gray-600">{step}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={stepDates[step] || ''}
+                      onChange={(e) => handleStepDate(step, e.target.value)}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                    {stepDates[step] && (
+                      <button
+                        type="button"
+                        onClick={() => handleStepDate(step, '')}
+                        className="text-gray-400 hover:text-gray-600 text-sm"
+                        aria-label={`Clear ${step} date`}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Remarks */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Remarks <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              placeholder="Any additional notes about your application..."
+            />
           </div>
 
           <button
