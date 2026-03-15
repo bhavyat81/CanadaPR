@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.canadapr.chat',
+  appId: 'com.bhavyat.canadapr',
   appName: 'Canada PR Chat',
   webDir: 'out',
   server: {
