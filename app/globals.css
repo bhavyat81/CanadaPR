@@ -7,15 +7,21 @@
   --foreground: #171717;
 }
 
-html,
-body {
+html {
   background-color: #ffffff;
   color: #171717;
   font-family: Arial, Helvetica, sans-serif;
 }
 
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .overflow-y-auto,
