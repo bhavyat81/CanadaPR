@@ -11,7 +11,7 @@ interface GroupCardProps {
 }
 
 export default function GroupCard({ month, displayName, memberCount, isUserGroup, category, isJoined, onJoin }: GroupCardProps) {
-  const href = `/chat/${category}/${month}`;
+  const href = `/chat?category=${encodeURIComponent(category)}&month=${encodeURIComponent(month)}`;
 
   return (
     <div

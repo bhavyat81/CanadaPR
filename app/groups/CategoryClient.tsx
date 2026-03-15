@@ -1,21 +1,22 @@
-"use client";
+'use client';
 
-import { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/components/AuthProvider";
-import GroupCard from "@/components/GroupCard";
-import { formatMonth, generateMonths } from "@/lib/months";
-import { PR_CATEGORIES } from "@/lib/categories";
+import { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthProvider';
+import GroupCard from '@/components/GroupCard';
+import { formatMonth, generateMonths } from '@/lib/months';
+import { PR_CATEGORIES } from '@/lib/categories';
 
-export default function GroupsByCategoryPage({
-  params,
-}: {
-  params: Promise<{ category: string }>;
-}) {
-  const { category } = use(params);
+export default function CategoryClient() {
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+
+  const category = searchParams.get('cat') ?? '';
+  const decodedCategory = decodeURIComponent(category);
+
+  const categoryInfo = PR_CATEGORIES.find((c) => c.value === decodedCategory);
 
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [joinedGroups, setJoinedGroups] = useState<Set<string>>(new Set());
@@ -23,43 +24,42 @@ export default function GroupsByCategoryPage({
   const [userPrCategory, setUserPrCategory] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
 
-  const decodedCategory = decodeURIComponent(category);
-
-  const categoryInfo = PR_CATEGORIES.find((c) => c.value === decodedCategory);
-
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push("/login");
+      router.push('/login');
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!authLoading && !category) {
+      router.push('/groups');
+    }
+  }, [category, authLoading, router]);
+
+  useEffect(() => {
+    if (!user || !category) return;
 
     const loadData = async () => {
       setLoadingData(true);
 
-      // Load user profile
       const { data: profile } = await supabase
-        .from("profiles")
-        .select("pr_month, pr_category")
-        .eq("id", user.id)
+        .from('profiles')
+        .select('pr_month, pr_category')
+        .eq('id', user.id)
         .single();
 
       setUserPrMonth(profile?.pr_month ?? null);
       setUserPrCategory(profile?.pr_category ?? null);
 
-      // Load group members for this category
       const { data } = await supabase
-        .from("group_members")
-        .select("group_key")
-        .like("group_key", `${decodedCategory}:%`);
+        .from('group_members')
+        .select('group_key')
+        .like('group_key', `${decodedCategory}:%`);
 
-      // Count members per month
       const counts: Record<string, number> = {};
       if (data) {
         data.forEach(({ group_key }) => {
-          const colonIdx = group_key.indexOf(":");
+          const colonIdx = group_key.indexOf(':');
           if (colonIdx !== -1) {
             const month = group_key.slice(colonIdx + 1);
             counts[month] = (counts[month] || 0) + 1;
@@ -68,11 +68,10 @@ export default function GroupsByCategoryPage({
       }
       setMemberCounts(counts);
 
-      // Load all of the user's joined groups
       const { data: userMemberships } = await supabase
-        .from("group_members")
-        .select("group_key")
-        .eq("user_id", user.id);
+        .from('group_members')
+        .select('group_key')
+        .eq('user_id', user.id);
       if (userMemberships) {
         setJoinedGroups(new Set(userMemberships.map((m: { group_key: string }) => m.group_key)));
       }
@@ -81,7 +80,7 @@ export default function GroupsByCategoryPage({
     };
 
     loadData();
-  }, [user, decodedCategory]);
+  }, [user, decodedCategory, category]);
 
   const handleJoin = async (month: string) => {
     if (!user) return;
@@ -94,10 +93,10 @@ export default function GroupsByCategoryPage({
     }));
 
     const { error } = await supabase
-      .from("group_members")
+      .from('group_members')
       .insert({ user_id: user.id, group_key: key });
 
-    if (error && error.code !== "23505") {
+    if (error && error.code !== '23505') {
       setJoinedGroups((prev) => {
         const next = new Set(prev);
         next.delete(key);
@@ -107,11 +106,11 @@ export default function GroupsByCategoryPage({
         ...prev,
         [month]: Math.max((prev[month] || 1) - 1, 0),
       }));
-      console.error("Failed to join group:", error);
+      console.error('Failed to join group:', error);
       return;
     }
 
-    router.push(`/chat/${decodedCategory}/${month}`);
+    router.push(`/chat?category=${encodeURIComponent(decodedCategory)}&month=${encodeURIComponent(month)}`);
   };
 
   if (authLoading || loadingData) {
@@ -122,7 +121,6 @@ export default function GroupsByCategoryPage({
     );
   }
 
-  // Always show all months from Jan 2025 to Dec 2026
   const allMonths = generateMonths();
 
   const pageTitle = categoryInfo
@@ -134,7 +132,7 @@ export default function GroupsByCategoryPage({
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <button
-            onClick={() => router.push("/groups")}
+            onClick={() => router.push('/groups')}
             className="text-red-600 hover:text-red-700 font-medium text-sm"
           >
             ← Back to Categories

@@ -16,8 +16,8 @@ export default function CategoryCard({ category, memberCount, isUserCategory }: 
     <div
       role="button"
       tabIndex={0}
-      onClick={() => router.push(`/groups/${category.value}`)}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && router.push(`/groups/${category.value}`)}
+      onClick={() => router.push(`/groups/category?cat=${encodeURIComponent(category.value)}`)}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && router.push(`/groups/category?cat=${encodeURIComponent(category.value)}`)}
       className={`p-5 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border-2 ${
         isUserCategory
           ? 'border-red-500 bg-red-50'

@@ -211,7 +211,7 @@ export default function CategoryChatPage({
       return;
     }
 
-    router.push(`/groups/${decodedCategory}`);
+    router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`);
   };
 
   const handleSendMessage = async (content: string) => {
@@ -282,7 +282,7 @@ export default function CategoryChatPage({
             </button>
           )}
           <button
-            onClick={() => router.push(`/groups/${decodedCategory}`)}
+            onClick={() => router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`)}
             className="text-red-600 hover:text-red-700 font-medium text-sm whitespace-nowrap"
           >
             ← Back
