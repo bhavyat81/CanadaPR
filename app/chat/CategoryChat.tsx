@@ -199,16 +199,187 @@ export default function CategoryChat({
       return;
     }
 
-    router.push(`/groups/${decodedCategory}`);
+    router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`);
   };
 
-  // TODO: paste the rest of your existing file from "handleSendMessage" onward if needed
-  // For now we just render a minimal placeholder to keep compilation obvious.
+  const handleSendMessage = async (content: string) => {
+    if (!user || !userProfile) return;
+
+    const optimisticId = `optimistic-${Date.now()}-${Math.random()}`;
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      group_month: groupKey,
+      sender_id: user.id,
+      sender_name: userProfile.display_name,
+      content,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
+    setSendError(null);
+
+    const { error, data } = await supabase
+      .from('messages')
+      .insert({
+        group_month: groupKey,
+        sender_id: user.id,
+        sender_name: userProfile.display_name,
+        content,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      console.error('Failed to send message:', error);
+      setSendError('Failed to send message. Please check your connection and try again.');
+    } else if (data) {
+      setMessages((prev) => prev.map((m) => (m.id === optimisticId ? data : m)));
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: 16 }}>
-      <h1>{categoryShort} — {displayMonth}</h1>
-      <p>Chat UI continues here (we need to paste the remainder of the original page.tsx).</p>
-      <div ref={messagesEndRef} />
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
+      {/* Chat Header */}
+      <div className="bg-white border-b px-4 py-3 sm:py-4 shadow-sm">
+        <div className="max-w-4xl mx-auto flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
+              🇨🇦 {displayMonth} Chat
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 truncate">
+              {categoryShort} · {decodedMonth} applicants
+            </p>
+          </div>
+          <MembersPanel members={members} />
+          {isMember && (
+            <button
+              onClick={() => setShowLeaveConfirm(true)}
+              title="Leave group"
+              className="text-gray-400 hover:text-red-500 transition-colors text-xl px-1"
+            >
+              🚪
+            </button>
+          )}
+          <button
+            onClick={() => router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`)}
+            className="text-red-600 hover:text-red-700 font-medium text-sm whitespace-nowrap"
+          >
+            ← Back
+          </button>
+        </div>
+      </div>
+
+      {/* Leave Group Confirmation Modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Leave this group?</h2>
+            <p className="text-gray-600 text-sm mb-6">
+              Are you sure you want to leave this group? You can always rejoin later.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLeaveGroup}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Leave Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto bg-gray-50 px-3 sm:px-4 py-4">
+        <div className="max-w-4xl mx-auto">
+          {loadingMessages ? (
+            <div className="text-center text-gray-500 py-8">Loading messages...</div>
+          ) : messages.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-5xl mb-4">💬</div>
+              <h3 className="text-lg font-semibold text-gray-700">No messages yet</h3>
+              <p className="text-gray-500 mt-2">
+                Be the first to say hello to the {displayMonth} {categoryShort} group!
+              </p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <ChatMessage
+                key={msg.id}
+                senderId={msg.sender_id}
+                senderName={msg.sender_name}
+                content={msg.content}
+                createdAt={msg.created_at}
+                isOwnMessage={msg.sender_id === user?.id}
+                onClickUsername={setSelectedUserId}
+              />
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Chat Input */}
+      <div className="max-w-4xl mx-auto w-full">
+        {sendError && (
+          <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm flex items-center justify-between">
+            <span>{sendError}</span>
+            <button
+              onClick={() => setSendError(null)}
+              className="ml-2 text-red-500 hover:text-red-700 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {!userProfile ? (
+          <div className="p-4 bg-yellow-50 border-t text-center text-yellow-800">
+            Please{' '}
+            <a href="/profile" className="font-medium underline">
+              set up your profile
+            </a>{' '}
+            to send messages.
+          </div>
+        ) : isMember === false ? (
+          <div className="p-4 bg-blue-50 border-t text-center text-blue-800">
+            <p className="mb-2">Join this group to start chatting.</p>
+            <button
+              onClick={handleJoinGroup}
+              disabled={joiningGroup}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {joiningGroup ? 'Joining...' : 'Join Group'}
+            </button>
+          </div>
+        ) : isMember === true ? (
+          <ChatInput onSendMessage={handleSendMessage} />
+        ) : (
+          <div className="p-4 border-t text-center text-gray-400 text-sm">Checking membership...</div>
+        )}
+      </div>
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal
+          userId={selectedUserId}
+          isOpen={true}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
     </div>
   );
 }
