@@ -37,5 +37,4 @@ next-env.d.ts
 .env.local
 
 # Native platforms (generated, large)
-/ios
 /android
