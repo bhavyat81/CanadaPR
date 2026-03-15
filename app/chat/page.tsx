@@ -1,19 +1,10 @@
-'use client';
-
-import { useSearchParams, useRouter } from 'next/navigation';
-import CategoryChat from './CategoryChat';
+import { Suspense } from 'react';
+import ChatClient from './ChatClient';
 
 export default function ChatPage() {
-  const sp = useSearchParams();
-  const router = useRouter();
-
-  const category = sp.get('category');
-  const month = sp.get('month');
-
-  if (!category || !month) {
-    router.push('/groups');
-    return null;
-  }
-
-  return <CategoryChat category={category} month={month} />;
+  return (
+    <Suspense fallback={null}>
+      <ChatClient />
+    </Suspense>
+  );
 }
