@@ -144,10 +144,15 @@ export default function ProfilePage() {
     }
 
     // Sign out the user
-    await supabase.auth.signOut();
+    const { error: signOutError } = await supabase.auth.signOut();
 
     setShowDeleteModal(false);
     setDeleteLoading(false);
+
+    if (signOutError) {
+      setDeleteError('Your data was deleted but we could not sign you out automatically. Please log out manually.');
+      return;
+    }
 
     // Show confirmation message then redirect
     setSuccess(
