@@ -12,6 +12,7 @@ export default function SignupPage() {
   const { user, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consentChecked, setConsentChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -99,9 +100,28 @@ export default function SignupPage() {
               placeholder="Minimum 6 characters"
             />
           </div>
+          <div className="flex items-start gap-3 pt-1">
+            <input
+              type="checkbox"
+              id="consent"
+              checked={consentChecked}
+              onChange={(e) => setConsentChecked(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer flex-shrink-0"
+            />
+            <label htmlFor="consent" className="text-sm text-gray-600 cursor-pointer">
+              I agree to the{' '}
+              <a href="/privacy-policy.html" target="_blank" rel="noopener" className="text-red-600 font-medium hover:underline">
+                Privacy Policy
+              </a>{' '}
+              and{' '}
+              <a href="/terms-of-service.html" target="_blank" rel="noopener" className="text-red-600 font-medium hover:underline">
+                Terms of Service
+              </a>
+            </label>
+          </div>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !consentChecked}
             className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? 'Creating account...' : 'Sign Up'}

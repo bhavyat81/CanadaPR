@@ -127,6 +127,13 @@ export default function Home() {
           Sign Up Free
         </Link>
       </section>
+
+      {/* Legal Disclaimer Footer */}
+      <footer className="bg-gray-50 border-t border-gray-200 py-6 px-4 text-center">
+        <p className="text-xs text-gray-400 max-w-2xl mx-auto">
+          CanadaPR Chat is a community platform and is not affiliated with IRCC or any government body. This is not immigration advice.
+        </p>
+      </footer>
     </div>
   );
 }
