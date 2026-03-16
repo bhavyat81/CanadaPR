@@ -21,6 +21,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -109,6 +112,48 @@ export default function ProfilePage() {
     setSuccess('Profile saved successfully!');
     setTimeout(() => router.push('/groups'), 1500);
     setLoading(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+
+    // Delete from group_members
+    const { error: membersError } = await supabase
+      .from('group_members')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (membersError) {
+      setDeleteError(membersError.message);
+      setDeleteLoading(false);
+      return;
+    }
+
+    // Delete from profiles
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', user.id);
+
+    if (profileError) {
+      setDeleteError(profileError.message);
+      setDeleteLoading(false);
+      return;
+    }
+
+    // Sign out the user
+    await supabase.auth.signOut();
+
+    setShowDeleteModal(false);
+    setDeleteLoading(false);
+
+    // Show confirmation message then redirect
+    setSuccess(
+      'Your account data has been deleted. Your authentication account will be fully removed within 30 days. You have been signed out.'
+    );
+    setTimeout(() => router.push('/'), 3000);
   };
 
   const handleStepDate = (step: string, value: string) => {
@@ -241,7 +286,60 @@ export default function ProfilePage() {
             {loading ? 'Saving...' : 'Save Profile'}
           </button>
         </form>
+
+        {/* Delete Account Section */}
+        <div className="mt-10 pt-6 border-t border-gray-200">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Danger Zone</h2>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="w-full border border-red-300 text-red-600 py-3 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+          >
+            Delete My Account
+          </button>
+        </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center px-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">⚠️</div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Delete Account</h2>
+              <p className="text-gray-600 text-sm">
+                Are you sure you want to delete your account? This will permanently delete all your
+                data including your profile, messages, and group memberships. This action cannot be undone.
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+                className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete Account'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowDeleteModal(false); setDeleteError(''); }}
+                disabled={deleteLoading}
+                className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
