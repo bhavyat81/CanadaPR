@@ -100,6 +100,22 @@ export const PR_CATEGORIES: PRCategory[] = [
   },
 ];
 
+// --- Visa Offices ---
+export const VISA_OFFICE_STEPS: string[] = ['PVO (Inland)', 'SVO (Inland)'];
+
+export const VISA_OFFICES: string[] = [
+  'Montreal',
+  'Etobicoke',
+  'Windsor',
+  'Ottawa',
+  'Sydney',
+  'Winnipeg',
+  'Edmonton',
+  'Vancouver',
+  'Whitehorse',
+  'Calgary',
+];
+
 // --- Journey Steps ---
 export const JOURNEY_STEPS: string[] = [
   "AOR",

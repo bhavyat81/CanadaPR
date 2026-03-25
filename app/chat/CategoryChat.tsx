@@ -17,6 +17,7 @@ import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
+const EDIT_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 interface Message {
   id: string;
@@ -70,12 +71,15 @@ export default function CategoryChat({
     messageId: string;
     senderId: string;
     content: string;
+    createdAt: string;
   } | null>(null);
   const [reportTarget, setReportTarget] = useState<{
     messageId: string;
     senderId: string;
     content: string;
   } | null>(null);
+  // Edit mode for own messages
+  const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
 
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
@@ -267,6 +271,21 @@ export default function CategoryChat({
       .on(
         'postgres_changes',
         {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `group_month=eq.${groupKey}`,
+        },
+        (payload) => {
+          const updatedMsg = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updatedMsg.id ? { ...m, content: updatedMsg.content } : m))
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'DELETE',
           schema: 'public',
           table: 'messages',
@@ -375,6 +394,41 @@ export default function CategoryChat({
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
   };
 
+  // Member: delete their own message (only within 24 hours)
+  const handleDeleteOwnMessage = async (messageId: string) => {
+    if (!user) return;
+    setActionSheet(null);
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('sender_id', user.id);
+    if (error) {
+      console.error('Failed to delete own message:', error);
+      return;
+    }
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  };
+
+  // Member: update their own message content (only within 24 hours)
+  const handleUpdateOwnMessage = async (content: string) => {
+    if (!user || !editingMessage) return;
+    const messageId = editingMessage.id;
+    setEditingMessage(null);
+    const { error } = await supabase
+      .from('messages')
+      .update({ content })
+      .eq('id', messageId)
+      .eq('sender_id', user.id);
+    if (error) {
+      console.error('Failed to edit own message:', error);
+      return;
+    }
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, content } : m))
+    );
+  };
+
   // Admin: kick a user from this group
   const handleKickMember = async (targetUserId: string) => {
     setAdminActionTarget(null);
@@ -418,6 +472,12 @@ export default function CategoryChat({
   };
 
   const handleSendMessage = async (content: string) => {
+    // If in edit mode, route to update handler instead
+    if (editingMessage) {
+      await handleUpdateOwnMessage(content);
+      return;
+    }
+
     if (!user || !userProfile) return;
 
     const optimisticId = `optimistic-${Date.now()}-${Math.random()}`;
@@ -565,9 +625,10 @@ export default function CategoryChat({
                     setAdminActionTarget({ userId, userName, userRole });
                   }
                 }}
-                onLongPress={(messageId, senderId, content) =>
-                  setActionSheet({ messageId, senderId, content })
-                }
+                onLongPress={(messageId, senderId, content) => {
+                  const msg = messages.find((m) => m.id === messageId);
+                  setActionSheet({ messageId, senderId, content, createdAt: msg?.created_at ?? new Date().toISOString() });
+                }}
               />
             ))
           )}
@@ -608,7 +669,11 @@ export default function CategoryChat({
             </button>
           </div>
         ) : isMember === true ? (
-          <ChatInput onSendMessage={handleSendMessage} />
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            editingMessage={editingMessage}
+            onCancelEdit={() => setEditingMessage(null)}
+          />
         ) : (
           <div className="p-4 border-t text-center text-gray-400 text-sm">Checking membership...</div>
         )}
@@ -633,12 +698,21 @@ export default function CategoryChat({
         <MessageActionSheet
           isOwnMessage={actionSheet.senderId === user?.id}
           isAdmin={isAdmin}
+          canEditOrDelete={
+            actionSheet.senderId === user?.id &&
+            Date.now() - new Date(actionSheet.createdAt).getTime() < EDIT_DELETE_WINDOW_MS
+          }
           onReport={() => {
             setReportTarget(actionSheet);
             setActionSheet(null);
           }}
           onBlock={handleBlockUserFromActionSheet}
           onDeleteMessage={() => handleAdminDeleteMessage(actionSheet.messageId)}
+          onEditOwnMessage={() => {
+            setEditingMessage({ id: actionSheet.messageId, content: actionSheet.content });
+            setActionSheet(null);
+          }}
+          onDeleteOwnMessage={() => handleDeleteOwnMessage(actionSheet.messageId)}
           onClose={() => setActionSheet(null)}
         />
       )}
