@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { generateMonths } from '@/lib/months';
-import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, formatStepDate } from '@/lib/categories';
+import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, VISA_OFFICE_STEPS, VISA_OFFICES, formatStepDate } from '@/lib/categories';
 
 const PR_MONTHS = generateMonths();
 
@@ -239,47 +239,64 @@ export default function ProfilePage() {
           {/* Journey Step Dates */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              PR Journey Milestones <span className="text-gray-400 font-normal">(tap a milestone to set its date)</span>
+              PR Journey Milestones <span className="text-gray-400 font-normal">(tap a milestone to set its value)</span>
             </label>
             <div className="flex flex-col divide-y divide-gray-100 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-              {JOURNEY_STEPS.map((step) => (
-                <div key={step}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveStep(activeStep === step ? null : step)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition-colors text-left"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-base w-6 text-center">{JOURNEY_STEP_EMOJIS[step] ?? '📌'}</span>
-                      <span className="text-sm text-gray-800">{step}</span>
-                    </span>
-                    <span className="text-xs text-gray-500 ml-2 shrink-0">
-                      {stepDates[step] ? formatStepDate(stepDates[step]) : <span className="text-gray-300">—</span>}
-                    </span>
-                  </button>
-                  {activeStep === step && (
-                    <div className="px-4 pb-3 pt-1 flex items-center gap-2 bg-white border-t border-gray-100">
-                      <input
-                        type="date"
-                        value={stepDates[step] || ''}
-                        onChange={(e) => handleStepDate(step, e.target.value)}
-                        autoFocus
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                      />
-                      {stepDates[step] && (
-                        <button
-                          type="button"
-                          onClick={() => handleStepDate(step, '')}
-                          className="text-gray-400 hover:text-red-500 text-sm"
-                          aria-label={`Clear ${step} date`}
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+              {JOURNEY_STEPS.map((step) => {
+                const isVisaOfficeStep = VISA_OFFICE_STEPS.includes(step);
+                return (
+                  <div key={step}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStep(activeStep === step ? null : step)}
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition-colors text-left"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-base w-6 text-center">{JOURNEY_STEP_EMOJIS[step] ?? '📌'}</span>
+                        <span className="text-sm text-gray-800">{step}</span>
+                      </span>
+                      <span className="text-xs text-gray-500 ml-2 shrink-0">
+                        {stepDates[step] ? (isVisaOfficeStep ? stepDates[step] : formatStepDate(stepDates[step])) : <span className="text-gray-300">—</span>}
+                      </span>
+                    </button>
+                    {activeStep === step && (
+                      <div className="px-4 pb-3 pt-1 flex items-center gap-2 bg-white border-t border-gray-100">
+                        {isVisaOfficeStep ? (
+                          <select
+                            value={stepDates[step] || ''}
+                            onChange={(e) => handleStepDate(step, e.target.value)}
+                            autoFocus
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          >
+                            <option value="">Select visa office</option>
+                            {VISA_OFFICES.map((office) => (
+                              <option key={office} value={office}>{office}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="date"
+                            value={stepDates[step] || ''}
+                            onChange={(e) => handleStepDate(step, e.target.value)}
+                            autoFocus
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          />
+                        )}
+                        {stepDates[step] && (
+                          <button
+                            type="button"
+                            onClick={() => handleStepDate(step, '')}
+                            className="text-gray-400 hover:text-red-500 text-sm"
+                            aria-label={`Clear ${step}`}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

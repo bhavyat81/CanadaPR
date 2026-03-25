@@ -1,15 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ChatInputProps {
   onSendMessage: (content: string) => Promise<void>;
   disabled?: boolean;
+  editingMessage?: { id: string; content: string } | null;
+  onCancelEdit?: () => void;
 }
 
-export default function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
+const KEYBOARD_SCROLL_DELAY_MS = 300; // Allow time for the software keyboard animation to complete
+
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // When entering edit mode, prefill the input and focus it
+  useEffect(() => {
+    if (editingMessage) {
+      setMessage(editingMessage.content);
+      inputRef.current?.focus();
+    } else {
+      setMessage('');
+    }
+  }, [editingMessage]);
+
+  const handleFocus = () => {
+    // Scroll the form into view so the keyboard doesn't hide it (WhatsApp-like behavior)
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    }, KEYBOARD_SCROLL_DELAY_MS);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,25 +47,55 @@ export default function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
     }
   };
 
+  const isEditing = !!editingMessage;
+
   return (
-    <form onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white border-t">
-      <input
-        type="text"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        placeholder="Type a message..."
-        disabled={disabled || sending}
-        className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
-      />
-      <button
-        type="submit"
-        disabled={!message.trim() || sending || disabled}
-        className="bg-red-600 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-        </svg>
-      </button>
-    </form>
+    <div>
+      {isEditing && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 border-t border-red-100 text-xs text-red-700">
+          <span className="flex-1">✏️ Editing message</span>
+          <button
+            type="button"
+            onClick={() => {
+              setMessage('');
+              onCancelEdit?.();
+            }}
+            className="font-semibold hover:text-red-900"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+      <form ref={formRef} onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white border-t">
+        <input
+          ref={inputRef}
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onFocus={handleFocus}
+          placeholder={isEditing ? 'Edit your message…' : 'Type a message...'}
+          disabled={disabled || sending}
+          autoComplete="off"
+          className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
+        />
+        <button
+          type="submit"
+          disabled={!message.trim() || sending || disabled}
+          className={`text-white rounded-full w-12 h-12 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 ${
+            isEditing ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+          }`}
+        >
+          {isEditing ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+            </svg>
+          )}
+        </button>
+      </form>
+    </div>
   );
 }

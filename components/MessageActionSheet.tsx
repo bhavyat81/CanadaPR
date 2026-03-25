@@ -3,18 +3,24 @@
 interface MessageActionSheetProps {
   isOwnMessage: boolean;
   isAdmin?: boolean;
+  canEditOrDelete?: boolean;
   onReport: () => void;
   onBlock: () => void;
   onDeleteMessage?: () => void;
+  onEditOwnMessage?: () => void;
+  onDeleteOwnMessage?: () => void;
   onClose: () => void;
 }
 
 export default function MessageActionSheet({
   isOwnMessage,
   isAdmin,
+  canEditOrDelete,
   onReport,
   onBlock,
   onDeleteMessage,
+  onEditOwnMessage,
+  onDeleteOwnMessage,
   onClose,
 }: MessageActionSheetProps) {
   return (
@@ -28,7 +34,41 @@ export default function MessageActionSheet({
       >
         <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4" />
 
-        {isAdmin && onDeleteMessage && (
+        {isOwnMessage && canEditOrDelete && onEditOwnMessage && (
+          <>
+            <button
+              onClick={onEditOwnMessage}
+              className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-xl">✏️</span>
+              <div>
+                <div className="text-sm font-semibold text-gray-800">Edit Message</div>
+                <div className="text-xs text-gray-500">Change what you wrote</div>
+              </div>
+            </button>
+
+            <div className="h-px bg-gray-100 mx-6" />
+          </>
+        )}
+
+        {isOwnMessage && canEditOrDelete && onDeleteOwnMessage && (
+          <>
+            <button
+              onClick={onDeleteOwnMessage}
+              className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-xl">🗑️</span>
+              <div>
+                <div className="text-sm font-semibold text-red-700">Delete Message</div>
+                <div className="text-xs text-gray-500">Remove this message for everyone</div>
+              </div>
+            </button>
+
+            <div className="h-px bg-gray-100 mx-6" />
+          </>
+        )}
+
+        {isAdmin && !isOwnMessage && onDeleteMessage && (
           <>
             <button
               onClick={onDeleteMessage}
