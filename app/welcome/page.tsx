@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
-import { JOURNEY_STEPS } from '@/lib/categories';
+import { JOURNEY_STEPS, VISA_OFFICE_STEPS, VISA_OFFICES } from '@/lib/categories';
 
 const SUCCESS_REDIRECT_DELAY = 1500;
 
@@ -14,7 +14,7 @@ export default function WelcomePage() {
   const [step, setStep] = useState(1);
   const [displayName, setDisplayName] = useState('');
   const [selectedStep, setSelectedStep] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedValue, setSelectedValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,14 +45,18 @@ export default function WelcomePage() {
     loadProfile();
   }, [user, router]);
 
-  const handleSave = async () => {
-    if (!user || !selectedStep || !selectedDate) return;
+  const isVisaOfficeStep = VISA_OFFICE_STEPS.includes(selectedStep);
 
-    // Validate date is not in the future
-    const today = new Date().toISOString().split('T')[0];
-    if (selectedDate > today) {
-      setError('Date cannot be in the future.');
-      return;
+  const handleSave = async () => {
+    if (!user || !selectedStep || !selectedValue) return;
+
+    // Validate date is not in the future (only for regular date steps, not visa office steps)
+    if (!isVisaOfficeStep) {
+      const today = new Date().toISOString().split('T')[0];
+      if (selectedValue > today) {
+        setError('Date cannot be in the future.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -63,7 +67,7 @@ export default function WelcomePage() {
       {
         user_id: user.id,
         step_name: selectedStep,
-        step_date: selectedDate,
+        step_date: selectedValue,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,step_name' }
@@ -76,7 +80,7 @@ export default function WelcomePage() {
     }
 
     // Also update application_status for backwards compatibility
-    const statusWithDate = `${selectedStep} (${selectedDate})`;
+    const statusWithDate = `${selectedStep} (${selectedValue})`;
     await supabase
       .from('profiles')
       .update({
@@ -148,6 +152,7 @@ export default function WelcomePage() {
                   key={journeyStep}
                   onClick={() => {
                     setSelectedStep(journeyStep);
+                    setSelectedValue('');
                     setStep(3);
                   }}
                   className="w-full text-left border border-gray-200 rounded-xl px-4 py-3 hover:border-red-400 hover:bg-red-50 transition-colors"
@@ -162,7 +167,7 @@ export default function WelcomePage() {
           </div>
         )}
 
-        {/* Step 3: Date picker */}
+        {/* Step 3: Date/office picker */}
         {step === 3 && (
           <div>
             <button
@@ -171,19 +176,39 @@ export default function WelcomePage() {
             >
               ← Back
             </button>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">When did you receive this update?</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">
+              {isVisaOfficeStep ? 'Which visa office?' : 'When did you receive this update?'}
+            </h2>
             <p className="text-gray-500 text-sm mb-2">
               Step: <span className="font-medium text-red-600">{selectedStep}</span>
             </p>
             <div className="mb-6 mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date received</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                max={new Date().toISOString().split('T')[0]}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              />
+              {isVisaOfficeStep ? (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Visa office</label>
+                  <select
+                    value={selectedValue}
+                    onChange={(e) => setSelectedValue(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
+                    <option value="">Select visa office</option>
+                    {VISA_OFFICES.map((office) => (
+                      <option key={office} value={office}>{office}</option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date received</label>
+                  <input
+                    type="date"
+                    value={selectedValue}
+                    onChange={(e) => setSelectedValue(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                </>
+              )}
             </div>
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
@@ -192,7 +217,7 @@ export default function WelcomePage() {
             )}
             <button
               onClick={handleSave}
-              disabled={!selectedDate || saving}
+              disabled={!selectedValue || saving}
               className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? 'Saving...' : 'Save'}
