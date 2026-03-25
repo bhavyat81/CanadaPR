@@ -3,6 +3,7 @@ import type { Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
 import Navbar from '@/components/Navbar';
+import SwipeBackProvider from '@/components/SwipeBackProvider';
 
 export const metadata: Metadata = {
   title: 'Canada PR Chat',
@@ -34,8 +35,10 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="h-full bg-white text-gray-900 font-sans flex flex-col">
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1 min-h-0">{children}</main>
+          <SwipeBackProvider>
+            <Navbar />
+            <main className="flex-1 min-h-0">{children}</main>
+          </SwipeBackProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
@@ -10,11 +10,13 @@ import UserProfileModal from '@/components/UserProfileModal';
 import MembersPanel from '@/components/MembersPanel';
 import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
 import MessageActionSheet from '@/components/MessageActionSheet';
+import AdminActionSheet from '@/components/AdminActionSheet';
 import ReportModal from '@/components/ReportModal';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 
 const MESSAGES_LIMIT = 100;
+const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
 
 interface Message {
   id: string;
@@ -49,6 +51,16 @@ export default function CategoryChat({
   const [sendError, setSendError] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Admin roles state
+  const [currentUserRole, setCurrentUserRole] = useState<string>('member');
+  const [senderRoles, setSenderRoles] = useState<Record<string, string>>({});
+  const [adminActionTarget, setAdminActionTarget] = useState<{
+    userId: string;
+    userName: string;
+    userRole: string;
+  } | null>(null);
+  const loadedSenderIdsRef = useRef<Set<string>>(new Set());
 
   // UGC safety state
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
@@ -100,6 +112,23 @@ export default function CategoryChat({
       });
   }, [user]);
 
+  // Load current user's role (creator is identified by email as a safety net)
+  useEffect(() => {
+    if (!user) return;
+    if (user.email === CREATOR_EMAIL) {
+      setCurrentUserRole('creator_admin');
+      return;
+    }
+    supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        setCurrentUserRole(data?.role ?? 'member');
+      });
+  }, [user]);
+
   // Check if user has accepted terms
   useEffect(() => {
     if (!user) return;
@@ -128,6 +157,28 @@ export default function CategoryChat({
         }
       });
   }, [user]);
+
+  // Load roles for a list of sender IDs (skips already-loaded ones)
+  const loadSenderRoles = useCallback(async (senderIds: string[]) => {
+    const unloaded = senderIds.filter((id) => !loadedSenderIdsRef.current.has(id));
+    if (unloaded.length === 0) return;
+    unloaded.forEach((id) => loadedSenderIdsRef.current.add(id));
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .in('id', unloaded);
+
+    if (data) {
+      setSenderRoles((prev) => {
+        const next = { ...prev };
+        (data as Array<{ id: string; role: string | null }>).forEach((p) => {
+          next[p.id] = p.role ?? 'member';
+        });
+        return next;
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -178,8 +229,15 @@ export default function CategoryChat({
         .order('created_at', { ascending: true })
         .limit(MESSAGES_LIMIT);
 
-      setMessages(data || []);
+      const msgs = data || [];
+      setMessages(msgs);
       setLoadingMessages(false);
+
+      // Load roles for all unique senders (fire-and-forget so messages render immediately)
+      const uniqueIds = [...new Set(msgs.map((m: Message) => m.sender_id))];
+      if (uniqueIds.length > 0) {
+        loadSenderRoles(uniqueIds);
+      }
     };
 
     loadMessages();
@@ -202,6 +260,23 @@ export default function CategoryChat({
             if (blockedIdsRef.current.has(newMsg.sender_id)) return prev;
             return [...prev, newMsg];
           });
+          // Load role for new sender if not yet cached
+          loadSenderRoles([newMsg.sender_id]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `group_month=eq.${groupKey}`,
+        },
+        (payload) => {
+          const deletedId = (payload.old as { id?: string }).id;
+          if (deletedId) {
+            setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+          }
         }
       )
       .subscribe();
@@ -209,7 +284,7 @@ export default function CategoryChat({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, groupKey]);
+  }, [user, groupKey, loadSenderRoles]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -287,6 +362,61 @@ export default function CategoryChat({
     setMessages((prev) => prev.filter((m) => m.sender_id !== targetId));
   };
 
+  // Admin: delete a specific message
+  const handleAdminDeleteMessage = async (messageId: string) => {
+    setActionSheet(null);
+    const { error } = await supabase.rpc('admin_delete_message', {
+      message_id_param: messageId,
+    });
+    if (error) {
+      console.error('Failed to delete message:', error);
+      return;
+    }
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+  };
+
+  // Admin: kick a user from this group
+  const handleKickMember = async (targetUserId: string) => {
+    setAdminActionTarget(null);
+    const { error } = await supabase.rpc('kick_from_group', {
+      target_user_id: targetUserId,
+      group_key_param: groupKey,
+    });
+    if (error) {
+      console.error('Failed to kick user:', error);
+      return;
+    }
+    setMembers((prev) => prev.filter((m) => m.id !== targetUserId));
+  };
+
+  // Admin: promote a user to admin role
+  const handlePromoteToAdmin = async (targetUserId: string) => {
+    setAdminActionTarget(null);
+    const { error } = await supabase.rpc('update_user_role', {
+      target_user_id: targetUserId,
+      new_role: 'admin',
+    });
+    if (error) {
+      console.error('Failed to promote user:', error);
+      return;
+    }
+    setSenderRoles((prev) => ({ ...prev, [targetUserId]: 'admin' }));
+  };
+
+  // Admin: demote a user to member role
+  const handleDemoteToMember = async (targetUserId: string) => {
+    setAdminActionTarget(null);
+    const { error } = await supabase.rpc('update_user_role', {
+      target_user_id: targetUserId,
+      new_role: 'member',
+    });
+    if (error) {
+      console.error('Failed to demote user:', error);
+      return;
+    }
+    setSenderRoles((prev) => ({ ...prev, [targetUserId]: 'member' }));
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!user || !userProfile) return;
 
@@ -341,6 +471,7 @@ export default function CategoryChat({
   }
 
   const visibleMessages = messages.filter((m) => !blockedIds.has(m.sender_id));
+  const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
@@ -420,10 +551,20 @@ export default function CategoryChat({
                 messageId={msg.id}
                 senderId={msg.sender_id}
                 senderName={msg.sender_name}
+                senderRole={
+                  msg.sender_id === user?.id
+                    ? currentUserRole
+                    : (senderRoles[msg.sender_id] ?? 'member')
+                }
                 content={msg.content}
                 createdAt={msg.created_at}
                 isOwnMessage={msg.sender_id === user?.id}
                 onClickUsername={setSelectedUserId}
+                onLongPressUsername={(userId, userName, userRole) => {
+                  if (isAdmin && userId !== user?.id) {
+                    setAdminActionTarget({ userId, userName, userRole });
+                  }
+                }}
                 onLongPress={(messageId, senderId, content) =>
                   setActionSheet({ messageId, senderId, content })
                 }
@@ -487,16 +628,32 @@ export default function CategoryChat({
         />
       )}
 
-      {/* Message Action Sheet (long-press) */}
+      {/* Message Action Sheet (long-press on message content) */}
       {actionSheet && (
         <MessageActionSheet
           isOwnMessage={actionSheet.senderId === user?.id}
+          isAdmin={isAdmin}
           onReport={() => {
             setReportTarget(actionSheet);
             setActionSheet(null);
           }}
           onBlock={handleBlockUserFromActionSheet}
+          onDeleteMessage={() => handleAdminDeleteMessage(actionSheet.messageId)}
           onClose={() => setActionSheet(null)}
+        />
+      )}
+
+      {/* Admin Action Sheet (long-press on username) */}
+      {adminActionTarget && (
+        <AdminActionSheet
+          targetUserId={adminActionTarget.userId}
+          targetUserName={adminActionTarget.userName}
+          targetUserRole={adminActionTarget.userRole}
+          currentUserRole={currentUserRole}
+          onClose={() => setAdminActionTarget(null)}
+          onKick={() => handleKickMember(adminActionTarget.userId)}
+          onPromoteToAdmin={() => handlePromoteToAdmin(adminActionTarget.userId)}
+          onDemoteToMember={() => handleDemoteToMember(adminActionTarget.userId)}
         />
       )}
 
