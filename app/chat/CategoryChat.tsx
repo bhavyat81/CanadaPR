@@ -8,6 +8,9 @@ import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import UserProfileModal from '@/components/UserProfileModal';
 import MembersPanel from '@/components/MembersPanel';
+import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
+import MessageActionSheet from '@/components/MessageActionSheet';
+import ReportModal from '@/components/ReportModal';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 
@@ -47,6 +50,21 @@ export default function CategoryChat({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // UGC safety state
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const blockedIdsRef = useRef<Set<string>>(new Set());
+  const [actionSheet, setActionSheet] = useState<{
+    messageId: string;
+    senderId: string;
+    content: string;
+  } | null>(null);
+  const [reportTarget, setReportTarget] = useState<{
+    messageId: string;
+    senderId: string;
+    content: string;
+  } | null>(null);
+
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
 
@@ -54,6 +72,11 @@ export default function CategoryChat({
 
   const displayMonth = formatMonth(decodedMonth);
   const categoryShort = getCategoryShortLabel(decodedCategory) ?? decodedCategory;
+
+  // Keep ref in sync with state so realtime callbacks always use latest blocked IDs
+  useEffect(() => {
+    blockedIdsRef.current = blockedIds;
+  }, [blockedIds]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -74,6 +97,35 @@ export default function CategoryChat({
           return;
         }
         setUserProfile(data);
+      });
+  }, [user]);
+
+  // Check if user has accepted terms
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('terms_accepted_at')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        setTermsAccepted(!!data?.terms_accepted_at);
+      });
+  }, [user]);
+
+  // Load blocked user IDs
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('blocks')
+      .select('blocked_id')
+      .eq('blocker_id', user.id)
+      .then(({ data }) => {
+        if (data) {
+          const ids = new Set(data.map((b: { blocked_id: string }) => b.blocked_id));
+          setBlockedIds(ids);
+          blockedIdsRef.current = ids;
+        }
       });
   }, [user]);
 
@@ -146,6 +198,8 @@ export default function CategoryChat({
           const newMsg = payload.new as Message;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
+            // Filter out messages from blocked users (use ref to avoid stale closure)
+            if (blockedIdsRef.current.has(newMsg.sender_id)) return prev;
             return [...prev, newMsg];
           });
         }
@@ -202,6 +256,37 @@ export default function CategoryChat({
     router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`);
   };
 
+  const handleBlockUserFromActionSheet = async () => {
+    if (!user || !actionSheet) return;
+    const targetId = actionSheet.senderId;
+    setActionSheet(null);
+
+    const { error: blockError } = await supabase.from('blocks').insert({
+      blocker_id: user.id,
+      blocked_id: targetId,
+    });
+
+    if (blockError && blockError.code !== '23505') {
+      console.error('Failed to block user:', blockError);
+      return;
+    }
+
+    // Notify developer via a report entry
+    await supabase.from('reports').insert({
+      reporter_id: user.id,
+      reported_user_id: targetId,
+      message_id: actionSheet.messageId,
+      message_content: actionSheet.content,
+      reason: 'User blocked',
+      group_month: groupKey,
+      status: 'pending',
+    });
+
+    setBlockedIds((prev) => new Set([...prev, targetId]));
+    // Remove blocked user's messages immediately
+    setMessages((prev) => prev.filter((m) => m.sender_id !== targetId));
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!user || !userProfile) return;
 
@@ -237,13 +322,25 @@ export default function CategoryChat({
     }
   };
 
-  if (authLoading) {
+  if (authLoading || termsAccepted === null) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-500">Loading...</div>
       </div>
     );
   }
+
+  // Show terms acceptance modal before first chat access
+  if (termsAccepted === false && user) {
+    return (
+      <TermsAcceptanceModal
+        userId={user.id}
+        onAccepted={() => setTermsAccepted(true)}
+      />
+    );
+  }
+
+  const visibleMessages = messages.filter((m) => !blockedIds.has(m.sender_id));
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
@@ -308,7 +405,7 @@ export default function CategoryChat({
         <div className="max-w-4xl mx-auto">
           {loadingMessages ? (
             <div className="text-center text-gray-500 py-8">Loading messages...</div>
-          ) : messages.length === 0 ? (
+          ) : visibleMessages.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">💬</div>
               <h3 className="text-lg font-semibold text-gray-700">No messages yet</h3>
@@ -317,15 +414,19 @@ export default function CategoryChat({
               </p>
             </div>
           ) : (
-            messages.map((msg) => (
+            visibleMessages.map((msg) => (
               <ChatMessage
                 key={msg.id}
+                messageId={msg.id}
                 senderId={msg.sender_id}
                 senderName={msg.sender_name}
                 content={msg.content}
                 createdAt={msg.created_at}
                 isOwnMessage={msg.sender_id === user?.id}
                 onClickUsername={setSelectedUserId}
+                onLongPress={(messageId, senderId, content) =>
+                  setActionSheet({ messageId, senderId, content })
+                }
               />
             ))
           )}
@@ -378,6 +479,36 @@ export default function CategoryChat({
           userId={selectedUserId}
           isOpen={true}
           onClose={() => setSelectedUserId(null)}
+          currentUserId={user?.id}
+          onBlockUser={(blockedId) => {
+            setBlockedIds((prev) => new Set([...prev, blockedId]));
+            setMessages((prev) => prev.filter((m) => m.sender_id !== blockedId));
+          }}
+        />
+      )}
+
+      {/* Message Action Sheet (long-press) */}
+      {actionSheet && (
+        <MessageActionSheet
+          isOwnMessage={actionSheet.senderId === user?.id}
+          onReport={() => {
+            setReportTarget(actionSheet);
+            setActionSheet(null);
+          }}
+          onBlock={handleBlockUserFromActionSheet}
+          onClose={() => setActionSheet(null)}
+        />
+      )}
+
+      {/* Report Modal */}
+      {reportTarget && user && (
+        <ReportModal
+          reporterId={user.id}
+          reportedUserId={reportTarget.senderId}
+          messageId={reportTarget.messageId}
+          messageContent={reportTarget.content}
+          groupMonth={groupKey}
+          onClose={() => setReportTarget(null)}
         />
       )}
     </div>

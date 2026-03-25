@@ -333,6 +333,7 @@ export default function CategoryChatPage({
             messages.map((msg) => (
               <ChatMessage
                 key={msg.id}
+                messageId={msg.id}
                 senderId={msg.sender_id}
                 senderName={msg.sender_name}
                 content={msg.content}
