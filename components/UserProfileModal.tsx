@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { formatMonth } from '@/lib/months';
 import { getCategoryLabel } from '@/lib/categories';
 import StatusTimeline, { JourneyStep } from './StatusTimeline';
+
+const BLOCK_SUCCESS_DISPLAY_DURATION = 1500;
 
 interface UserProfile {
   display_name: string;
@@ -17,13 +19,25 @@ interface UserProfileModalProps {
   userId: string;
   isOpen: boolean;
   onClose: () => void;
+  currentUserId?: string;
+  onBlockUser?: (blockedId: string) => void;
 }
 
-export default function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalProps) {
+export default function UserProfileModal({ userId, isOpen, onClose, currentUserId, onBlockUser }: UserProfileModalProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [journeySteps, setJourneySteps] = useState<JourneyStep[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blocking, setBlocking] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [blockError, setBlockError] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -34,6 +48,7 @@ export default function UserProfileModal({ userId, isOpen, onClose }: UserProfil
     setError(null);
     setProfile(null);
     setJourneySteps([]);
+    setBlocked(false);
 
     const load = async () => {
       const [profileResult, stepsResult] = await Promise.all([
@@ -70,6 +85,37 @@ export default function UserProfileModal({ userId, isOpen, onClose }: UserProfil
       cancelled = true;
     };
   }, [userId, isOpen]);
+
+  const handleBlockUser = async () => {
+    if (!currentUserId || blocking) return;
+    setBlocking(true);
+    setBlockError(false);
+
+    const { error: blockError } = await supabase.from('blocks').insert({
+      blocker_id: currentUserId,
+      blocked_id: userId,
+    });
+
+    if (blockError && blockError.code !== '23505') {
+      console.error('Failed to block user:', blockError);
+      setBlockError(true);
+      setBlocking(false);
+      return;
+    }
+
+    // Also create a report so the developer is notified
+    await supabase.from('reports').insert({
+      reporter_id: currentUserId,
+      reported_user_id: userId,
+      reason: 'User blocked',
+      status: 'pending',
+    });
+
+    setBlocked(true);
+    setBlocking(false);
+    onBlockUser?.(userId);
+    closeTimerRef.current = setTimeout(onClose, BLOCK_SUCCESS_DISPLAY_DURATION);
+  };
 
   if (!isOpen) return null;
 
@@ -131,6 +177,31 @@ export default function UserProfileModal({ userId, isOpen, onClose }: UserProfil
               journeySteps={journeySteps}
               applicationStatus={profile?.application_status ?? ''}
             />
+
+            {currentUserId && currentUserId !== userId && (
+              <div className="mt-5 pt-4 border-t">
+                {blocked ? (
+                  <p className="text-sm text-center text-gray-500">
+                    ✅ User blocked. Their messages will no longer be visible to you.
+                  </p>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleBlockUser}
+                      disabled={blocking}
+                      className="w-full py-2.5 text-sm font-semibold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-40"
+                    >
+                      {blocking ? 'Blocking...' : '🚫 Block User'}
+                    </button>
+                    {blockError && (
+                      <p className="mt-2 text-xs text-red-600 text-center">
+                        Could not block user. Please try again.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
