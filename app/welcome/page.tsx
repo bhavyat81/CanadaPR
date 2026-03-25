@@ -62,32 +62,57 @@ export default function WelcomePage() {
     setSaving(true);
     setError('');
 
-    // Save to journey_steps table
-    const { error: stepsError } = await supabase.from('journey_steps').upsert(
-      {
-        user_id: user.id,
-        step_name: selectedStep,
-        step_date: selectedValue,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,step_name' }
-    );
+    if (isVisaOfficeStep) {
+      // Save PVO/SVO as text to profiles table (not journey_steps)
+      const fieldKey =
+        selectedStep === 'PVO (Inland)' ? 'pvo' :
+        selectedStep === 'SVO (Inland)' ? 'svo' :
+        null;
 
-    if (stepsError) {
-      setSaving(false);
-      setError('Failed to save update. Please try again.');
-      return;
+      if (!fieldKey) {
+        setSaving(false);
+        setError('Unrecognised visa office step.');
+        return;
+      }
+
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ [fieldKey]: selectedValue, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (profileUpdateError) {
+        setSaving(false);
+        setError('Failed to save update. Please try again.');
+        return;
+      }
+    } else {
+      // Save to journey_steps table
+      const { error: stepsError } = await supabase.from('journey_steps').upsert(
+        {
+          user_id: user.id,
+          step_name: selectedStep,
+          step_date: selectedValue,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,step_name' }
+      );
+
+      if (stepsError) {
+        setSaving(false);
+        setError('Failed to save update. Please try again.');
+        return;
+      }
+
+      // Also update application_status for backwards compatibility
+      const statusWithDate = `${selectedStep} (${selectedValue})`;
+      await supabase
+        .from('profiles')
+        .update({
+          application_status: statusWithDate,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
     }
-
-    // Also update application_status for backwards compatibility
-    const statusWithDate = `${selectedStep} (${selectedValue})`;
-    await supabase
-      .from('profiles')
-      .update({
-        application_status: statusWithDate,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
 
     setSaving(false);
     setStep(4);

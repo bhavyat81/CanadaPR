@@ -46,14 +46,23 @@ export default function ProfilePage() {
         setPrMonth(data.pr_month || '');
         setPrStream(data.pr_stream || '');
         setPrCategory(data.pr_category || '');
+
+        // Load PVO/SVO from profiles text columns into stepDates
+        const visaOfficeValues: Record<string, string> = {};
+        if (data.pvo) visaOfficeValues['PVO (Inland)'] = data.pvo;
+        if (data.svo) visaOfficeValues['SVO (Inland)'] = data.svo;
+        setStepDates((prev) => ({ ...prev, ...visaOfficeValues }));
       }
 
       if (!stepsResult.error && stepsResult.data) {
         const dates: Record<string, string> = {};
         stepsResult.data.forEach(({ step_name, step_date }) => {
-          if (step_date) dates[step_name] = step_date;
+          // Skip visa office steps – they are stored in profiles.pvo / profiles.svo
+          if (!VISA_OFFICE_STEPS.includes(step_name) && step_date) {
+            dates[step_name] = step_date;
+          }
         });
-        setStepDates(dates);
+        setStepDates((prev) => ({ ...prev, ...dates }));
       }
     };
 
@@ -80,6 +89,8 @@ export default function ProfilePage() {
       pr_stream: prStream,
       pr_category: prCategory,
       application_status: applicationStatus,
+      pvo: stepDates['PVO (Inland)'] || null,
+      svo: stepDates['SVO (Inland)'] || null,
       updated_at: new Date().toISOString(),
     });
 
@@ -89,8 +100,8 @@ export default function ProfilePage() {
       return;
     }
 
-    // Upsert journey steps for each step that has a date
-    const stepsToUpsert = JOURNEY_STEPS.filter((step) => stepDates[step]).map((step) => ({
+    // Upsert journey steps for each non-visa-office step that has a date
+    const stepsToUpsert = JOURNEY_STEPS.filter((step) => !VISA_OFFICE_STEPS.includes(step) && stepDates[step]).map((step) => ({
       user_id: user.id,
       step_name: step,
       step_date: stepDates[step],
