@@ -4,6 +4,7 @@ import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
 import Navbar from '@/components/Navbar';
 import SwipeBackProvider from '@/components/SwipeBackProvider';
+import ThemeProvider from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'Canada PR Chat',
@@ -33,13 +34,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full">
-      <body className="h-full bg-white text-gray-900 font-sans flex flex-col">
-        <AuthProvider>
-          <SwipeBackProvider>
-            <Navbar />
-            <main className="flex-1 min-h-0">{children}</main>
-          </SwipeBackProvider>
-        </AuthProvider>
+      <body className="h-full bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans flex flex-col">
+        <ThemeProvider>
+          <AuthProvider>
+            <SwipeBackProvider>
+              <Navbar />
+              <main className="flex-1 min-h-0">{children}</main>
+            </SwipeBackProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

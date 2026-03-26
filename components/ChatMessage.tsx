@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import Image from 'next/image';
 
 const LONG_PRESS_DURATION = 500;
 
@@ -18,7 +19,9 @@ interface ChatMessageProps {
   senderId: string;
   senderName: string;
   senderRole?: string;
+  senderAvatar?: string;
   content: string;
+  imageUrl?: string;
   createdAt: string;
   isOwnMessage: boolean;
   onClickUsername?: (senderId: string) => void;
@@ -31,7 +34,9 @@ export default function ChatMessage({
   senderId,
   senderName,
   senderRole = 'member',
+  senderAvatar,
   content,
+  imageUrl,
   createdAt,
   isOwnMessage,
   onClickUsername,
@@ -43,13 +48,13 @@ export default function ChatMessage({
     minute: '2-digit',
   });
 
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   const baseName = isOwnMessage ? 'You' : senderName;
   const roleLabel = getRoleLabel(senderRole);
   const displayName = `${baseName} - ${roleLabel}`;
 
-  // Long-press support for message bubble
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Long-press support for username button
   const usernameLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -92,40 +97,94 @@ export default function ChatMessage({
     onClickUsername?.(senderId);
   };
 
+  const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/adventurer/svg?seed=default';
+
   return (
-    <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-4`}>
-      <button
-        className={`text-xs font-semibold mb-1 mx-1 hover:underline focus:outline-none ${
-          isOwnMessage ? 'text-red-600 text-right' : 'text-blue-600 text-left'
-        }`}
-        onClick={handleUsernameClick}
-        onTouchStart={handleUsernameTouchStart}
-        onTouchEnd={cancelUsernameLongPress}
-        onTouchMove={cancelUsernameLongPress}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onLongPressUsername?.(senderId, senderName, senderRole);
-        }}
-      >
-        {displayName}
-      </button>
-      <div
-        className={`max-w-[75%] px-4 py-2 rounded-2xl cursor-pointer select-none ${
-          isOwnMessage
-            ? 'bg-red-600 text-white rounded-br-none'
-            : 'bg-gray-100 text-gray-800 rounded-bl-none'
-        }`}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={cancelLongPress}
-        onTouchMove={cancelLongPress}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onLongPress?.(messageId, senderId, content);
-        }}
-      >
-        <p className="text-sm">{content}</p>
+    <>
+      {lightboxOpen && imageUrl && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <Image
+            src={imageUrl}
+            alt="Full size"
+            width={800}
+            height={800}
+            className="max-w-full max-h-full object-contain rounded-xl"
+            unoptimized
+          />
+        </div>
+      )}
+
+      <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-3`}>
+        <div className={`flex items-end gap-1.5 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+          {/* Avatar */}
+          <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-100 dark:bg-slate-700 flex-shrink-0 mb-1">
+            <Image
+              src={senderAvatar || DEFAULT_AVATAR}
+              alt={senderName}
+              width={28}
+              height={28}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
+          </div>
+
+          <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+            <button
+              className={`text-xs font-semibold mb-1 hover:underline focus:outline-none ${
+                isOwnMessage ? 'text-red-600 dark:text-red-400 text-right' : 'text-blue-600 dark:text-blue-400 text-left'
+              }`}
+              onClick={handleUsernameClick}
+              onTouchStart={handleUsernameTouchStart}
+              onTouchEnd={cancelUsernameLongPress}
+              onTouchMove={cancelUsernameLongPress}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onLongPressUsername?.(senderId, senderName, senderRole);
+              }}
+            >
+              {displayName}
+            </button>
+
+            <div
+              className={`max-w-[75%] rounded-2xl shadow-sm cursor-pointer select-none ${
+                isOwnMessage
+                  ? 'bg-red-600 dark:bg-red-900 text-white rounded-br-none'
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100 rounded-bl-none'
+              } ${imageUrl && !content ? 'p-1' : 'px-4 py-2.5'}`}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={cancelLongPress}
+              onTouchMove={cancelLongPress}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onLongPress?.(messageId, senderId, content);
+              }}
+            >
+              {imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setLightboxOpen(true)}
+                  className="block rounded-xl overflow-hidden"
+                >
+                  <Image
+                    src={imageUrl}
+                    alt="Chat image"
+                    width={240}
+                    height={240}
+                    className="rounded-xl max-w-[240px] object-cover"
+                    unoptimized
+                  />
+                </button>
+              )}
+              {content && <p className="text-sm">{content}</p>}
+            </div>
+
+            <span className="text-xs text-gray-400 dark:text-slate-500 mt-1">{formattedTime}</span>
+          </div>
+        </div>
       </div>
-      <span className="text-xs text-gray-400 mt-1 mx-1">{formattedTime}</span>
-    </div>
+    </>
   );
 }

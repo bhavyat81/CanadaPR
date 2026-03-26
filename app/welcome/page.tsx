@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { JOURNEY_STEPS, VISA_OFFICE_STEPS, VISA_OFFICES } from '@/lib/categories';
+import LatestDrawCard from '@/components/LatestDrawCard';
 
 const SUCCESS_REDIRECT_DELAY = 1500;
 
@@ -123,24 +125,36 @@ export default function WelcomePage() {
 
   if (authLoading || !displayName) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-gray-500 dark:text-slate-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4 py-8 page-fade-in">
+      <div className="w-full max-w-md space-y-4">
+        {/* Latest Draw Card — always shown */}
+        <LatestDrawCard />
+
+        {/* CRS Calculator Link */}
+        <Link
+          href="/calculator"
+          className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md shadow-red-200/50 dark:shadow-red-900/30"
+        >
+          🧮 Calculate Your CRS Score
+        </Link>
+
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg dark:shadow-slate-900/50 p-8 border border-transparent dark:border-slate-700">
 
         {/* Step 1: Welcome + Yes/No */}
         {step === 1 && (
           <div className="text-center">
             <div className="text-5xl mb-4">🇨🇦</div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">
               Welcome back, {displayName}!
             </h1>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-600 dark:text-slate-400 mb-8">
               Is there any new update you want to share?
             </p>
             <div className="flex gap-4">
@@ -152,7 +166,7 @@ export default function WelcomePage() {
               </button>
               <button
                 onClick={() => router.push('/groups')}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                className="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 py-3 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               >
                 No
               </button>
@@ -254,10 +268,11 @@ export default function WelcomePage() {
         {step === 4 && (
           <div className="text-center">
             <div className="text-5xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Profile updated!</h2>
-            <p className="text-gray-500">Redirecting you to the groups...</p>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">Profile updated!</h2>
+            <p className="text-gray-500 dark:text-slate-400">Redirecting you to the groups...</p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
