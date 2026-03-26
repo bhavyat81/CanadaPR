@@ -73,6 +73,14 @@ export default function Home() {
       <section className="py-12 px-4 bg-white dark:bg-slate-800/50">
         <div className="max-w-lg mx-auto">
           <LatestDrawCard />
+          <div className="mt-3 text-center">
+            <Link
+              href="/draws"
+              className="inline-flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+            >
+              📊 View All Draws →
+            </Link>
+          </div>
           <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-2">
             Data sourced from IRCC open data — updates automatically
           </p>

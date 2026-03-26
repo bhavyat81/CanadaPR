@@ -14,7 +14,7 @@ interface MembersPanelProps {
   members: Member[];
 }
 
-const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/adventurer/svg?seed=default';
+const DEFAULT_AVATAR = '/avatars/diverse_people_man_dark_short_hair_skin3.png';
 
 export default function MembersPanel({ members }: MembersPanelProps) {
   const [expanded, setExpanded] = useState(false);

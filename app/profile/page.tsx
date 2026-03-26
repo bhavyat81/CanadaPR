@@ -11,54 +11,56 @@ import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, VISA_OFFICE_STEPS, V
 const PR_MONTHS = generateMonths();
 
 // ─── Avatar definitions ───────────────────────────────────────────────────────
-const AVATAR_LIST = [
-  // adventurer – diverse skin tones
-  { style: 'adventurer', seed: 'Anna',    skinColor: 'f2d3b1' },
-  { style: 'adventurer', seed: 'Raj',     skinColor: 'c68642' },
-  { style: 'adventurer', seed: 'Amara',   skinColor: '8d5524' },
-  { style: 'adventurer', seed: 'Mike',    skinColor: 'e0ac69' },
-  { style: 'adventurer', seed: 'Priya',   skinColor: 'c68642' },
-  { style: 'adventurer', seed: 'Chen',    skinColor: 'f2d3b1' },
-  { style: 'adventurer', seed: 'Sofia',   skinColor: 'd6a27d' },
-  { style: 'adventurer', seed: 'Kali',    skinColor: '8d5524' },
-  // big-ears
-  { style: 'big-ears', seed: 'Felix' },
-  { style: 'big-ears', seed: 'Luna' },
-  { style: 'big-ears', seed: 'Coco' },
-  { style: 'big-ears', seed: 'Milo' },
-  { style: 'big-ears', seed: 'Nova' },
-  { style: 'big-ears', seed: 'Zara' },
-  // fun-emoji
-  { style: 'fun-emoji', seed: 'Happy' },
-  { style: 'fun-emoji', seed: 'Cool' },
-  { style: 'fun-emoji', seed: 'Silly' },
-  { style: 'fun-emoji', seed: 'Brave' },
-  { style: 'fun-emoji', seed: 'Spark' },
-  { style: 'fun-emoji', seed: 'Blaze' },
-  // avataaars
-  { style: 'avataaars', seed: 'John' },
-  { style: 'avataaars', seed: 'Emily' },
-  { style: 'avataaars', seed: 'Carlos' },
-  { style: 'avataaars', seed: 'Mei' },
-  { style: 'avataaars', seed: 'Aisha' },
-  { style: 'avataaars', seed: 'Luca' },
-  { style: 'avataaars', seed: 'Yuki' },
-  { style: 'avataaars', seed: 'Omar' },
-  // bottts – robots
-  { style: 'bottts', seed: 'Robot1' },
-  { style: 'bottts', seed: 'Robot2' },
-  { style: 'bottts', seed: 'Robot3' },
-  { style: 'bottts', seed: 'Robot4' },
-  { style: 'bottts', seed: 'Robot5' },
-  { style: 'bottts', seed: 'Robot6' },
-];
+const DEFAULT_AVATAR = '/avatars/diverse_people_man_dark_short_hair_skin3.png';
 
-function avatarUrl({ style, seed, skinColor }: { style: string; seed: string; skinColor?: string }) {
-  const base = `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`;
-  return skinColor ? `${base}&skinColor=${skinColor}` : base;
+type AvatarTab = 'all' | 'men' | 'women' | 'boys' | 'girls' | 'more';
+
+interface AvatarDef {
+  filename: string;
+  category: AvatarTab;
 }
 
-const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/adventurer/svg?seed=default';
+function buildAvatarList(): AvatarDef[] {
+  const types: { base: string; category: AvatarTab }[] = [
+    { base: 'diverse_people_man_blonde_eyepatch_disability', category: 'men' },
+    { base: 'diverse_people_man_cornrows_short_hair', category: 'men' },
+    { base: 'diverse_people_man_dark_short_hair', category: 'men' },
+    { base: 'diverse_people_man_jewish_yamaka', category: 'men' },
+    { base: 'diverse_people_man_native_indigenous_long_hair', category: 'men' },
+    { base: 'diverse_people_man_plus_size', category: 'men' },
+    { base: 'diverse_people_man_senior_bald_goatee_glasses', category: 'men' },
+    { base: 'diverse_people_man_senior_beard', category: 'men' },
+    { base: 'diverse_people_man_sikh_turban_beard_skin_skin', category: 'men' },
+    { base: 'diverse_people_man_vitiligo_curly_hair', category: 'men' },
+    { base: 'diverse_people_woman_cornrows_piercing', category: 'women' },
+    { base: 'diverse_people_woman_curly_long_hair', category: 'women' },
+    { base: 'diverse_people_woman_indian_bindi', category: 'women' },
+    { base: 'diverse_people_woman_muslim_hijab', category: 'women' },
+    { base: 'diverse_people_woman_muslim_shayla', category: 'women' },
+    { base: 'diverse_people_woman_native_indigenous_braids', category: 'women' },
+    { base: 'diverse_people_woman_pink_hair_glasses', category: 'women' },
+    { base: 'diverse_people_woman_plus_size_beauty_mark', category: 'women' },
+    { base: 'diverse_people_woman_senior_hearing_aid_disability', category: 'women' },
+    { base: 'diverse_people_woman_vitiligo_curly_hair', category: 'women' },
+    { base: 'diverse_people_boy_curly_hair', category: 'boys' },
+    { base: 'diverse_people_boy_glasses', category: 'boys' },
+    { base: 'diverse_people_boy_long_hair', category: 'boys' },
+    { base: 'diverse_people_girl_ponytails', category: 'girls' },
+    { base: 'diverse_people_girl_red_braid', category: 'girls' },
+    { base: 'diverse_people_nonbinary_bald_earrings', category: 'more' },
+    { base: 'diverse_people_nonbinary_lgbtq_blonde', category: 'more' },
+    { base: 'diverse_people_nonbinary_red_short_hair', category: 'more' },
+  ];
+  const list: AvatarDef[] = [];
+  for (const { base, category } of types) {
+    for (let skin = 1; skin <= 5; skin++) {
+      list.push({ filename: `/avatars/${base}_skin${skin}.png`, category });
+    }
+  }
+  return list;
+}
+
+const AVATAR_LIST = buildAvatarList();
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -77,6 +79,8 @@ export default function ProfilePage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [avatarTab, setAvatarTab] = useState<AvatarTab>('all');
+  const [pendingAvatar, setPendingAvatar] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -246,7 +250,7 @@ export default function ProfilePage() {
           {/* Avatar with glow ring */}
           <button
             type="button"
-            onClick={() => setShowAvatarModal(true)}
+            onClick={() => { setPendingAvatar(avatarUrl_state); setShowAvatarModal(true); }}
             className="mx-auto block mb-3 relative group"
             aria-label="Change avatar"
           >
@@ -409,27 +413,56 @@ export default function ProfilePage() {
       {/* Avatar Selection Modal */}
       {showAvatarModal && (
         <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center px-4 z-50" onClick={() => setShowAvatarModal(false)}>
-          <div className="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
               <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100">Choose Your Avatar</h2>
               <button onClick={() => setShowAvatarModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">✕</button>
             </div>
-            <div className="overflow-y-auto p-4">
+            {/* Category tabs */}
+            <div className="flex gap-1 px-4 pt-3 pb-2 overflow-x-auto shrink-0">
+              {(['all', 'men', 'women', 'boys', 'girls', 'more'] as AvatarTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setAvatarTab(tab)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    avatarTab === tab
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {tab === 'all' ? 'All' : tab === 'more' ? 'More' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div className="overflow-y-auto p-4 flex-1">
               <div className="grid grid-cols-5 gap-3">
-                {AVATAR_LIST.map((av) => {
-                  const url = avatarUrl(av);
-                  const selected = avatarUrl_state === url;
-                  return (
-                    <button
-                      key={url}
-                      onClick={() => { setAvatarUrl(url); setShowAvatarModal(false); }}
-                      className={`aspect-square rounded-full overflow-hidden border-4 transition-all hover:scale-110 ${selected ? 'border-red-500 shadow-lg shadow-red-200/50' : 'border-transparent hover:border-red-300'}`}
-                    >
-                      <Image src={url} alt="avatar option" width={64} height={64} className="w-full h-full object-cover" unoptimized />
-                    </button>
-                  );
-                })}
+                {AVATAR_LIST
+                  .filter((av) => avatarTab === 'all' || av.category === avatarTab)
+                  .map((av) => {
+                    const selected = (pendingAvatar !== '' ? pendingAvatar : avatarUrl_state) === av.filename;
+                    return (
+                      <button
+                        key={av.filename}
+                        onClick={() => setPendingAvatar(av.filename)}
+                        className={`aspect-square rounded-full overflow-hidden border-4 transition-all hover:scale-110 ${selected ? 'border-red-500 shadow-lg shadow-red-200/50 dark:shadow-red-900/50' : 'border-transparent hover:border-red-300'}`}
+                      >
+                        <Image src={av.filename} alt="avatar option" width={64} height={64} className="w-full h-full object-cover" unoptimized />
+                      </button>
+                    );
+                  })}
               </div>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 dark:border-slate-700 shrink-0">
+              <button
+                onClick={() => {
+                  if (pendingAvatar) setAvatarUrl(pendingAvatar);
+                  setShowAvatarModal(false);
+                }}
+                disabled={!pendingAvatar}
+                className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>

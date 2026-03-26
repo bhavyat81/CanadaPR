@@ -137,6 +137,14 @@ export default function WelcomePage() {
         {/* Latest Draw Card — always shown */}
         <LatestDrawCard />
 
+        {/* View All Draws link */}
+        <Link
+          href="/draws"
+          className="flex items-center justify-center gap-2 w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+        >
+          📊 View All Draws →
+        </Link>
+
         {/* CRS Calculator Link */}
         <Link
           href="/calculator"
