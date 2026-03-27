@@ -1,162 +1,212 @@
 [
   {
-    "drawNumber": 328,
-    "date": "2025-12-11",
-    "program": "No program specified",
-    "crsScore": 524,
-    "invitations": 1000,
-    "category": "General"
-  },
-  {
-    "drawNumber": 327,
-    "date": "2025-11-27",
-    "program": "Canadian Experience Class",
-    "crsScore": 516,
-    "invitations": 4000,
-    "category": "CEC"
-  },
-  {
-    "drawNumber": 326,
-    "date": "2025-11-13",
-    "program": "No program specified",
-    "crsScore": 522,
-    "invitations": 1000,
-    "category": "General"
-  },
-  {
-    "drawNumber": 325,
-    "date": "2025-10-30",
-    "program": "Canadian Experience Class",
-    "crsScore": 514,
-    "invitations": 4000,
-    "category": "CEC"
-  },
-  {
-    "drawNumber": 324,
-    "date": "2025-10-16",
-    "program": "No program specified",
-    "crsScore": 519,
-    "invitations": 1200,
-    "category": "General"
-  },
-  {
-    "drawNumber": 323,
-    "date": "2025-10-02",
-    "program": "Provincial Nominee Program",
-    "crsScore": 691,
-    "invitations": 1000,
-    "category": "PNP"
-  },
-  {
-    "drawNumber": 322,
-    "date": "2025-09-18",
-    "program": "Canadian Experience Class",
-    "crsScore": 511,
-    "invitations": 4500,
-    "category": "CEC"
-  },
-  {
-    "drawNumber": 321,
-    "date": "2025-09-04",
-    "program": "No program specified",
-    "crsScore": 517,
-    "invitations": 1000,
-    "category": "General"
-  },
-  {
-    "drawNumber": 320,
-    "date": "2025-08-21",
-    "program": "Canadian Experience Class",
-    "crsScore": 509,
-    "invitations": 4000,
-    "category": "CEC"
-  },
-  {
-    "drawNumber": 319,
-    "date": "2025-08-07",
-    "program": "No program specified",
-    "crsScore": 515,
-    "invitations": 1200,
-    "category": "General"
-  },
-  {
-    "drawNumber": 318,
-    "date": "2025-07-24",
-    "program": "Federal Skilled Worker",
-    "crsScore": 524,
-    "invitations": 1000,
-    "category": "FSW"
-  },
-  {
-    "drawNumber": 317,
-    "date": "2025-07-10",
-    "program": "Canadian Experience Class",
-    "crsScore": 508,
-    "invitations": 4200,
-    "category": "CEC"
-  },
-  {
-    "drawNumber": 316,
-    "date": "2025-06-26",
-    "program": "No program specified",
-    "crsScore": 512,
-    "invitations": 1000,
-    "category": "General"
-  },
-  {
-    "drawNumber": 315,
-    "date": "2025-06-12",
-    "program": "Canadian Experience Class",
-    "crsScore": 506,
-    "invitations": 3800,
-    "category": "CEC"
-  },
-  {
-    "drawNumber": 314,
-    "date": "2025-05-29",
-    "program": "Provincial Nominee Program",
-    "crsScore": 695,
+    "drawNumber": "345",
+    "drawDate": "2026-03-18",
+    "programType": "French-Language proficiency 2026-Version 2",
     "invitations": 800,
-    "category": "PNP"
+    "crsScore": 379
   },
   {
-    "drawNumber": 313,
-    "date": "2025-05-15",
-    "program": "No program specified",
-    "crsScore": 510,
+    "drawNumber": "344",
+    "drawDate": "2026-03-04",
+    "programType": "Canadian Experience Class",
+    "invitations": 4500,
+    "crsScore": 510
+  },
+  {
+    "drawNumber": "343",
+    "drawDate": "2026-02-18",
+    "programType": "No program specified",
+    "invitations": 1000,
+    "crsScore": 527
+  },
+  {
+    "drawNumber": "342",
+    "drawDate": "2026-02-04",
+    "programType": "French-Language proficiency 2026-Version 1",
+    "invitations": 700,
+    "crsScore": 371
+  },
+  {
+    "drawNumber": "341",
+    "drawDate": "2026-01-21",
+    "programType": "Canadian Experience Class",
+    "invitations": 4200,
+    "crsScore": 508
+  },
+  {
+    "drawNumber": "340",
+    "drawDate": "2026-01-07",
+    "programType": "Provincial Nominee Program",
+    "invitations": 1000,
+    "crsScore": 695
+  },
+  {
+    "drawNumber": "339",
+    "drawDate": "2025-12-11",
+    "programType": "No program specified",
+    "invitations": 1000,
+    "crsScore": 524
+  },
+  {
+    "drawNumber": "338",
+    "drawDate": "2025-11-27",
+    "programType": "Canadian Experience Class",
+    "invitations": 4000,
+    "crsScore": 516
+  },
+  {
+    "drawNumber": "337",
+    "drawDate": "2025-11-13",
+    "programType": "No program specified",
+    "invitations": 1000,
+    "crsScore": 522
+  },
+  {
+    "drawNumber": "336",
+    "drawDate": "2025-10-30",
+    "programType": "Canadian Experience Class",
+    "invitations": 4000,
+    "crsScore": 514
+  },
+  {
+    "drawNumber": "335",
+    "drawDate": "2025-10-16",
+    "programType": "No program specified",
     "invitations": 1200,
-    "category": "General"
+    "crsScore": 519
   },
   {
-    "drawNumber": 312,
-    "date": "2025-05-01",
-    "program": "Canadian Experience Class",
-    "crsScore": 504,
-    "invitations": 4000,
-    "category": "CEC"
-  },
-  {
-    "drawNumber": 311,
-    "date": "2025-04-17",
-    "program": "No program specified",
-    "crsScore": 508,
+    "drawNumber": "334",
+    "drawDate": "2025-10-02",
+    "programType": "Provincial Nominee Program",
     "invitations": 1000,
-    "category": "General"
+    "crsScore": 691
   },
   {
-    "drawNumber": 310,
-    "date": "2025-04-03",
-    "program": "Federal Skilled Worker",
-    "crsScore": 521,
+    "drawNumber": "333",
+    "drawDate": "2025-09-18",
+    "programType": "Canadian Experience Class",
+    "invitations": 4500,
+    "crsScore": 511
+  },
+  {
+    "drawNumber": "332",
+    "drawDate": "2025-09-04",
+    "programType": "No program specified",
     "invitations": 1000,
-    "category": "FSW"
+    "crsScore": 517
   },
   {
-    "drawNumber": 309,
-    "date": "2025-03-20",
-    "program": "Canadian Experience Class",
-    "crsScore": 502,
+    "drawNumber": "331",
+    "drawDate": "2025-08-21",
+    "programType": "Canadian Experience Class",
     "invitations": 4000,
-    "category": "CEC"
+    "crsScore": 509
+  },
+  {
+    "drawNumber": "330",
+    "drawDate": "2025-08-07",
+    "programType": "No program specified",
+    "invitations": 1200,
+    "crsScore": 515
+  },
+  {
+    "drawNumber": "329",
+    "drawDate": "2025-07-24",
+    "programType": "Healthcare occupations",
+    "invitations": 1000,
+    "crsScore": 433
+  },
+  {
+    "drawNumber": "328",
+    "drawDate": "2025-07-10",
+    "programType": "Canadian Experience Class",
+    "invitations": 4200,
+    "crsScore": 508
+  },
+  {
+    "drawNumber": "327",
+    "drawDate": "2025-06-26",
+    "programType": "No program specified",
+    "invitations": 1000,
+    "crsScore": 512
+  },
+  {
+    "drawNumber": "326",
+    "drawDate": "2025-06-12",
+    "programType": "Canadian Experience Class",
+    "invitations": 3800,
+    "crsScore": 506
+  },
+  {
+    "drawNumber": "325",
+    "drawDate": "2025-05-29",
+    "programType": "Provincial Nominee Program",
+    "invitations": 800,
+    "crsScore": 695
+  },
+  {
+    "drawNumber": "324",
+    "drawDate": "2025-05-15",
+    "programType": "No program specified",
+    "invitations": 1200,
+    "crsScore": 510
+  },
+  {
+    "drawNumber": "323",
+    "drawDate": "2025-05-01",
+    "programType": "Canadian Experience Class",
+    "invitations": 4000,
+    "crsScore": 504
+  },
+  {
+    "drawNumber": "322",
+    "drawDate": "2025-04-17",
+    "programType": "No program specified",
+    "invitations": 1000,
+    "crsScore": 508
+  },
+  {
+    "drawNumber": "321",
+    "drawDate": "2025-04-03",
+    "programType": "STEM occupations",
+    "invitations": 1500,
+    "crsScore": 481
+  },
+  {
+    "drawNumber": "320",
+    "drawDate": "2025-03-20",
+    "programType": "Canadian Experience Class",
+    "invitations": 4000,
+    "crsScore": 502
+  },
+  {
+    "drawNumber": "319",
+    "drawDate": "2025-03-06",
+    "programType": "Trade occupations",
+    "invitations": 1000,
+    "crsScore": 433
+  },
+  {
+    "drawNumber": "318",
+    "drawDate": "2025-02-20",
+    "programType": "No program specified",
+    "invitations": 1000,
+    "crsScore": 506
+  },
+  {
+    "drawNumber": "317",
+    "drawDate": "2025-02-06",
+    "programType": "French-Language proficiency 2025-Version 2",
+    "invitations": 800,
+    "crsScore": 375
+  },
+  {
+    "drawNumber": "316",
+    "drawDate": "2025-01-23",
+    "programType": "Canadian Experience Class",
+    "invitations": 4000,
+    "crsScore": 499
   }
 ]
