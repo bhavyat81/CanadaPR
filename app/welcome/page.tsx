@@ -1,95 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
-import CRSCalculator from '@/components/CRSCalculator';
+import { JOURNEY_STEPS, VISA_OFFICE_STEPS, VISA_OFFICES } from '@/lib/categories';
+import LatestDrawCard from '@/components/LatestDrawCard';
 
-interface BlockedUser {
-  blocked_id: string;
-  display_name: string | null;
-}
-
-interface VaultImage {
-  name: string;
-  url: string;
-}
-
-type SectionId = 'crs' | 'draws' | 'profile' | 'blocked' | 'vault';
-
-const LATEST_DRAWS = [
-  { date: 'Mar 20, 2025', type: 'General', crs: 529, invitations: '1,000' },
-  { date: 'Mar 12, 2025', type: 'Category-based (Healthcare)', crs: 422, invitations: '2,000' },
-  { date: 'Feb 28, 2025', type: 'General', crs: 524, invitations: '2,000' },
-  { date: 'Feb 13, 2025', type: 'Category-based (STEM)', crs: 415, invitations: '3,000' },
-  { date: 'Jan 30, 2025', type: 'General', crs: 518, invitations: '5,500' },
-];
-
-interface AccordionSectionProps {
-  icon: string;
-  title: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
-
-function AccordionSection({ icon, title, isOpen, onToggle, children }: AccordionSectionProps) {
-  return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-4 text-left"
-      >
-        <span className="flex items-center gap-3">
-          <span className="text-xl">{icon}</span>
-          <span className="font-semibold text-gray-800 dark:text-white">{title}</span>
-        </span>
-        <span
-          className="text-gray-400 dark:text-gray-500 text-xs transition-transform duration-300"
-          style={{ display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-        >
-          ▼
-        </span>
-      </button>
-      <div
-        className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ maxHeight: isOpen ? '2000px' : '0px' }}
-      >
-        <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-800 pt-4">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
+const SUCCESS_REDIRECT_DELAY = 1500;
 
 export default function WelcomePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
+  const [step, setStep] = useState(1);
   const [displayName, setDisplayName] = useState('');
-  const [openSection, setOpenSection] = useState<SectionId | null>(null);
-
-  // Blocked users
-  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
-  const [blockedLoading, setBlockedLoading] = useState(false);
-
-  // Vault images
-  const [vaultImages, setVaultImages] = useState<VaultImage[]>([]);
-  const [loadingVault, setLoadingVault] = useState(false);
-  const [uploadingVault, setUploadingVault] = useState(false);
-  const [deletingVault, setDeletingVault] = useState<string | null>(null);
-  const [vaultError, setVaultError] = useState('');
-  const vaultFileInputRef = useRef<HTMLInputElement>(null);
-
-  // Delete account
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
+  const [selectedStep, setSelectedStep] = useState('');
+  const [selectedValue, setSelectedValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -118,444 +47,233 @@ export default function WelcomePage() {
     loadProfile();
   }, [user, router]);
 
-  useEffect(() => {
-    if (openSection === 'blocked' && user) {
-      loadBlockedUsers();
+  const isVisaOfficeStep = VISA_OFFICE_STEPS.includes(selectedStep);
+
+  const handleSave = async () => {
+    if (!user || !selectedStep || !selectedValue) return;
+
+    // Validate date is not in the future (only for regular date steps, not visa office steps)
+    if (!isVisaOfficeStep) {
+      const today = new Date().toISOString().split('T')[0];
+      if (selectedValue > today) {
+        setError('Date cannot be in the future.');
+        return;
+      }
     }
-    if (openSection === 'vault' && user) {
-      loadVaultImages();
-    }
-  // loadBlockedUsers and loadVaultImages are stable (references user via closure); openSection + user are the true triggers
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openSection, user]);
 
-  const loadBlockedUsers = async () => {
-    if (!user) return;
-    setBlockedLoading(true);
+    setSaving(true);
+    setError('');
 
-    const { data: blocksData } = await supabase
-      .from('blocks')
-      .select('blocked_id')
-      .eq('blocker_id', user.id);
+    if (isVisaOfficeStep) {
+      // Save PVO/SVO as text to profiles table (not journey_steps)
+      const fieldKey =
+        selectedStep === 'PVO (Inland)' ? 'pvo' :
+        selectedStep === 'SVO (Inland)' ? 'svo' :
+        null;
 
-    if (blocksData && blocksData.length > 0) {
-      const ids = blocksData.map((b: { blocked_id: string }) => b.blocked_id);
-      const { data: profilesData } = await supabase
+      if (!fieldKey) {
+        setSaving(false);
+        setError('Unrecognised visa office step.');
+        return;
+      }
+
+      const { error: profileUpdateError } = await supabase
         .from('profiles')
-        .select('id, display_name')
-        .in('id', ids);
+        .update({ [fieldKey]: selectedValue, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
 
-      const nameMap: Record<string, string | null> = {};
-      (profilesData ?? []).forEach((p: { id: string; display_name: string | null }) => {
-        nameMap[p.id] = p.display_name;
-      });
-
-      setBlockedUsers(
-        blocksData.map((b: { blocked_id: string }) => ({
-          blocked_id: b.blocked_id,
-          display_name: nameMap[b.blocked_id] ?? null,
-        }))
+      if (profileUpdateError) {
+        setSaving(false);
+        setError('Failed to save update. Please try again.');
+        return;
+      }
+    } else {
+      // Save to journey_steps table
+      const { error: stepsError } = await supabase.from('journey_steps').upsert(
+        {
+          user_id: user.id,
+          step_name: selectedStep,
+          step_date: selectedValue,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,step_name' }
       );
-    } else {
-      setBlockedUsers([]);
+
+      if (stepsError) {
+        setSaving(false);
+        setError('Failed to save update. Please try again.');
+        return;
+      }
+
+      // Also update application_status for backwards compatibility
+      const statusWithDate = `${selectedStep} (${selectedValue})`;
+      await supabase
+        .from('profiles')
+        .update({
+          application_status: statusWithDate,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
     }
 
-    setBlockedLoading(false);
-  };
-
-  const handleUnblock = async (blockedId: string) => {
-    if (!user) return;
-    await supabase
-      .from('blocks')
-      .delete()
-      .eq('blocker_id', user.id)
-      .eq('blocked_id', blockedId);
-    setBlockedUsers((prev) => prev.filter((u) => u.blocked_id !== blockedId));
-  };
-
-  // ─── Vault functions ────────────────────────────────────────────────────────
-
-  const VAULT_SIGNED_URL_EXPIRY = 3600; // 1 hour
-
-  const loadVaultImages = async () => {
-    if (!user) return;
-    setLoadingVault(true);
-    const { data, error } = await supabase.storage
-      .from('vault-images')
-      .list(`${user.id}/`, { limit: 100 });
-    if (!error && data) {
-      const filtered = data.filter((f) => f.name !== '.emptyFolderPlaceholder');
-      const imagePromises = filtered.map(async (f) => {
-        const { data: urlData } = await supabase.storage
-          .from('vault-images')
-          .createSignedUrl(`${user.id}/${f.name}`, VAULT_SIGNED_URL_EXPIRY);
-        return { name: f.name, url: urlData?.signedUrl ?? '' };
-      });
-      setVaultImages(await Promise.all(imagePromises));
-    } else {
-      setVaultImages([]);
-    }
-    setLoadingVault(false);
-  };
-
-  const handleVaultUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user || !e.target.files || e.target.files.length === 0) return;
-    setUploadingVault(true);
-    setVaultError('');
-    const file = e.target.files[0];
-    const ext = file.name.split('.').pop() ?? 'jpg';
-    const fileName = `${Date.now()}.${ext}`;
-    const path = `${user.id}/${fileName}`;
-    const { error } = await supabase.storage
-      .from('vault-images')
-      .upload(path, file);
-    if (error) {
-      setVaultError('Upload failed. Please try again.');
-    } else {
-      await loadVaultImages();
-    }
-    setUploadingVault(false);
-    // Reset file input so the same file can be re-selected
-    if (vaultFileInputRef.current) vaultFileInputRef.current.value = '';
-  };
-
-  const handleVaultDelete = async (imageName: string) => {
-    if (!user) return;
-    setDeletingVault(imageName);
-    setVaultError('');
-    const { error } = await supabase.storage
-      .from('vault-images')
-      .remove([`${user.id}/${imageName}`]);
-    if (error) {
-      setVaultError('Delete failed. Please try again.');
-    } else {
-      setVaultImages((prev) => prev.filter((img) => img.name !== imageName));
-    }
-    setDeletingVault(null);
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    setDeleteLoading(true);
-    setDeleteError('');
-
-    const { error: membersError } = await supabase
-      .from('group_members')
-      .delete()
-      .eq('user_id', user.id);
-
-    if (membersError) {
-      setDeleteError(membersError.message);
-      setDeleteLoading(false);
-      return;
-    }
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', user.id);
-
-    if (profileError) {
-      setDeleteError(profileError.message);
-      setDeleteLoading(false);
-      return;
-    }
-
-    const { error: signOutError } = await supabase.auth.signOut();
-    setShowDeleteModal(false);
-    setDeleteLoading(false);
-
-    if (signOutError) {
-      setDeleteError(
-        'Your data was deleted but we could not sign you out automatically. Please log out manually.'
-      );
-      return;
-    }
-
-    router.push('/');
-  };
-
-  const toggleSection = (id: SectionId) => {
-    setOpenSection((prev) => (prev === id ? null : id));
+    setSaving(false);
+    setStep(4);
+    setTimeout(() => {
+      router.push('/groups');
+    }, SUCCESS_REDIRECT_DELAY);
   };
 
   if (authLoading || !displayName) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-gray-500 dark:text-slate-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-8">
-      <div className="max-w-lg mx-auto space-y-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4 py-8 page-fade-in">
+      <div className="w-full max-w-md space-y-4">
+        {/* Latest Draw Card — always shown */}
+        <LatestDrawCard />
 
-        {/* Greeting */}
-        <div className="text-center pb-2">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Welcome, {displayName}! 🇨🇦
-          </h1>
-        </div>
-
-        {/* Go to Chat Groups */}
+        {/* CRS Calculator Link */}
         <Link
-          href="/groups"
-          className="block w-full bg-red-600 text-white text-center py-3.5 rounded-2xl font-semibold hover:bg-red-700 transition-colors shadow-sm text-base"
+          href="/calculator"
+          className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md shadow-red-200/50 dark:shadow-red-900/30"
         >
-          Go to Chat Groups →
+          🧮 Calculate Your CRS Score
         </Link>
 
-        {/* CRS Calculator */}
-        <AccordionSection
-          icon="📊"
-          title="CRS Calculator"
-          isOpen={openSection === 'crs'}
-          onToggle={() => toggleSection('crs')}
-        >
-          <CRSCalculator />
-        </AccordionSection>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg dark:shadow-slate-900/50 p-8 border border-transparent dark:border-slate-700">
 
-        {/* Latest Draws */}
-        <AccordionSection
-          icon="📈"
-          title="Latest Draws"
-          isOpen={openSection === 'draws'}
-          onToggle={() => toggleSection('draws')}
-        >
-          <div className="overflow-x-auto -mx-1 rounded-lg">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-800">
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    Date
-                  </th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
-                    Draw Type
-                  </th>
-                  <th className="text-right px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    CRS Cut-off
-                  </th>
-                  <th className="text-right px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    Invitations
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {LATEST_DRAWS.map((draw, i) => (
-                  <tr
-                    key={i}
-                    className={
-                      i % 2 === 0
-                        ? 'bg-white dark:bg-gray-900'
-                        : 'bg-gray-50 dark:bg-gray-800/50'
-                    }
-                  >
-                    <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300 whitespace-nowrap text-xs">
-                      {draw.date}
-                    </td>
-                    <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300 text-xs">
-                      {draw.type}
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">
-                      {draw.crs}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300 text-xs">
-                      {draw.invitations}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-            Data is illustrative. Check IRCC for official draw results.
-          </p>
-        </AccordionSection>
-
-        {/* Update My Profile */}
-        <AccordionSection
-          icon="👤"
-          title="Update My Profile"
-          isOpen={openSection === 'profile'}
-          onToggle={() => toggleSection('profile')}
-        >
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            Update your display name, PR category, application month, and journey milestones.
-          </p>
-          <Link
-            href="/profile"
-            className="inline-block bg-red-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-red-700 transition-colors text-sm"
-          >
-            Go to Profile →
-          </Link>
-        </AccordionSection>
-
-        {/* Blocked Users */}
-        <AccordionSection
-          icon="🚫"
-          title="Blocked Users"
-          isOpen={openSection === 'blocked'}
-          onToggle={() => toggleSection('blocked')}
-        >
-          {blockedLoading ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
-          ) : blockedUsers.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              You haven&apos;t blocked anyone.
+        {/* Step 1: Welcome + Yes/No */}
+        {step === 1 && (
+          <div className="text-center">
+            <div className="text-5xl mb-4">🇨🇦</div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">
+              Welcome back, {displayName}!
+            </h1>
+            <p className="text-gray-600 dark:text-slate-400 mb-8">
+              Is there any new update you want to share?
             </p>
-          ) : (
-            <div className="space-y-2">
-              {blockedUsers.map((u) => (
-                <div
-                  key={u.blocked_id}
-                  className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg px-4 py-3"
-                >
-                  <span className="text-sm text-gray-800 dark:text-gray-200">
-                    @{u.display_name ?? 'Unknown User'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleUnblock(u.blocked_id)}
-                    className="text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
-                  >
-                    Unblock
-                  </button>
-                </div>
-              ))}
+            <div className="flex gap-4">
+              <button
+                onClick={() => setStep(2)}
+                className="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => router.push('/groups')}
+                className="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 py-3 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                No
+              </button>
             </div>
-          )}
-        </AccordionSection>
+          </div>
+        )}
 
-        {/* My Vault */}
-        <AccordionSection
-          icon="🔒"
-          title="My Vault"
-          isOpen={openSection === 'vault'}
-          onToggle={() => toggleSection('vault')}
-        >
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            Private image storage — only you can see these. Share images from vault directly in chat.
-          </p>
-          {/* Upload button */}
-          <div className="mb-4">
-            <input
-              ref={vaultFileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleVaultUpload}
-            />
+        {/* Step 2: Select journey step */}
+        {step === 2 && (
+          <div>
             <button
-              type="button"
-              onClick={() => { setVaultError(''); vaultFileInputRef.current?.click(); }}
-              disabled={uploadingVault}
-              className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:border-red-400 hover:text-red-600 dark:hover:border-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setStep(1)}
+              className="text-gray-400 hover:text-gray-600 mb-4 text-sm flex items-center gap-1"
             >
-              {uploadingVault ? 'Uploading…' : '+ Upload Image'}
+              ← Back
             </button>
-          </div>
-          {/* Vault error message */}
-          {vaultError && (
-            <p className="text-xs text-red-600 dark:text-red-400 mb-3">{vaultError}</p>
-          )}
-          {/* Image grid */}
-          {loadingVault ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">Loading...</p>
-          ) : vaultImages.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              No images yet. Upload your first image above.
-            </p>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {vaultImages.map((img) => (
-                <div key={img.name} className="relative group aspect-square">
-                  {img.url ? (
-                    <Image
-                      src={img.url}
-                      alt={img.name}
-                      fill
-                      className="object-cover rounded-lg"
-                      sizes="(max-width: 768px) 33vw, 150px"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                      ?
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleVaultDelete(img.name)}
-                    disabled={deletingVault === img.name}
-                    className="absolute top-1 right-1 bg-black/60 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                    aria-label="Delete image"
-                  >
-                    ✕
-                  </button>
-                </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Which step did you complete?</h2>
+            <p className="text-gray-500 text-sm mb-6">Select the step in your PR journey</p>
+            <div className="space-y-3">
+              {JOURNEY_STEPS.map((journeyStep, index) => (
+                <button
+                  key={journeyStep}
+                  onClick={() => {
+                    setSelectedStep(journeyStep);
+                    setSelectedValue('');
+                    setStep(3);
+                  }}
+                  className="w-full text-left border border-gray-200 rounded-xl px-4 py-3 hover:border-red-400 hover:bg-red-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-400 font-medium w-5">{index + 1}.</span>
+                    <span className="font-semibold text-gray-800">{journeyStep}</span>
+                  </div>
+                </button>
               ))}
             </div>
-          )}
-        </AccordionSection>
+          </div>
+        )}
 
-        {/* Delete Account danger button */}
-        <div className="pt-2 pb-6">
-          <button
-            type="button"
-            onClick={() => setShowDeleteModal(true)}
-            className="w-full border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 py-3 rounded-2xl font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          >
-            🗑️ Delete Account
-          </button>
-        </div>
-      </div>
-
-      {/* Delete Account Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 w-full max-w-md">
-            <div className="text-center mb-6">
-              <div className="text-4xl mb-3">⚠️</div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
-                Delete Account
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Are you sure you want to delete your account? This will permanently delete all your
-                data including your profile, messages, and group memberships. This action cannot be
-                undone.
-              </p>
+        {/* Step 3: Date/office picker */}
+        {step === 3 && (
+          <div>
+            <button
+              onClick={() => setStep(2)}
+              className="text-gray-400 hover:text-gray-600 mb-4 text-sm flex items-center gap-1"
+            >
+              ← Back
+            </button>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">
+              {isVisaOfficeStep ? 'Which visa office?' : 'When did you receive this update?'}
+            </h2>
+            <p className="text-gray-500 text-sm mb-2">
+              Step: <span className="font-medium text-red-600">{selectedStep}</span>
+            </p>
+            <div className="mb-6 mt-4">
+              {isVisaOfficeStep ? (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Visa office</label>
+                  <select
+                    value={selectedValue}
+                    onChange={(e) => setSelectedValue(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
+                    <option value="">Select visa office</option>
+                    {VISA_OFFICES.map((office) => (
+                      <option key={office} value={office}>{office}</option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date received</label>
+                  <input
+                    type="date"
+                    value={selectedValue}
+                    onChange={(e) => setSelectedValue(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                </>
+              )}
             </div>
-
-            {deleteError && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
-                {deleteError}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+                {error}
               </div>
             )}
-
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={handleDeleteAccount}
-                disabled={deleteLoading}
-                className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {deleteLoading ? 'Deleting...' : 'Delete Account'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteError('');
-                }}
-                disabled={deleteLoading}
-                className="w-full border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+            <button
+              onClick={handleSave}
+              disabled={!selectedValue || saving}
+              className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
           </div>
+        )}
+
+        {/* Step 4: Success */}
+        {step === 4 && (
+          <div className="text-center">
+            <div className="text-5xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">Profile updated!</h2>
+            <p className="text-gray-500 dark:text-slate-400">Redirecting you to the groups...</p>
+          </div>
+        )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
