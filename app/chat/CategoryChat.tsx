@@ -127,6 +127,10 @@ export default function CategoryChat({
     let hideHandle: { remove: () => Promise<void> } | null = null;
 
     import('@capacitor/keyboard').then(({ Keyboard }) => {
+      // Prevent native scroll and hide the accessory bar for cleaner iOS UX
+      Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
+      Keyboard.setScroll({ isDisabled: true }).catch(() => {});
+
       Keyboard.addListener('keyboardWillShow', (info) => {
         setKeyboardHeight(info.keyboardHeight);
         // Scroll to bottom so latest messages stay visible above the keyboard
@@ -731,7 +735,7 @@ export default function CategoryChat({
   const pinnedMessageIds = new Set(pinnedMessages.map((p) => p.message_id));
 
   return (
-    <div className="flex flex-col" style={{ height: `calc(100dvh - 64px - ${keyboardHeight}px)` }}>
+    <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)', paddingBottom: `${keyboardHeight}px` }}>
       {/* Chat Header */}
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
@@ -932,7 +936,6 @@ export default function CategoryChat({
             onSendMessage={handleSendMessage}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
-            keyboardHeight={keyboardHeight}
           />
         ) : (
           <div className="p-4 border-t dark:border-gray-700 text-center text-gray-400 dark:text-gray-500 text-sm">Checking membership...</div>
