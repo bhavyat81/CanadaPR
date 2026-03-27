@@ -9,6 +9,7 @@ import StatusTimeline, { JourneyStep } from './StatusTimeline';
 import { getAvatarUrl } from '@/lib/avatars';
 
 const BLOCK_SUCCESS_DISPLAY_DURATION = 1500;
+const AVATAR_SIZE = 48;
 
 interface UserProfile {
   display_name: string;
@@ -138,8 +139,8 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
             <Image
               src={avatarUrl}
               alt={profile?.display_name ?? 'User'}
-              width={48}
-              height={48}
+              width={AVATAR_SIZE}
+              height={AVATAR_SIZE}
               className="rounded-full flex-shrink-0"
               unoptimized
             />
