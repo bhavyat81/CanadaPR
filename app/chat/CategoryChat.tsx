@@ -147,6 +147,10 @@ export default function CategoryChat({
     });
 
     return () => {
+      // Re-enable native scroll when leaving the chat page
+      import('@capacitor/keyboard').then(({ Keyboard }) => {
+        Keyboard.setScroll({ isDisabled: false }).catch(() => {});
+      }).catch(() => {});
       showHandle?.remove().catch(() => {});
       hideHandle?.remove().catch(() => {});
     };

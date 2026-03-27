@@ -1,6 +1,12 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { getAvatarUrl } from '@/lib/avatars';
+
+// Parses [image:URL] format and returns the URL, or null if not an image message
+function parseImageMessage(content: string): string | null {
+  const match = content.match(/^\[image:(.*)\]$/);
+  return match ? match[1] : null;
+}
 
 const LONG_PRESS_DURATION = 500;
 
@@ -49,6 +55,10 @@ export default function ChatMessage({
   const roleLabel = getRoleLabel(senderRole);
   const displayName = `${baseName} - ${roleLabel}`;
   const avatarUrl = getAvatarUrl(senderId);
+  const imageUrl = parseImageMessage(content);
+
+  // Full-screen image viewer state
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   // Long-press support for message bubble
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -151,10 +161,54 @@ export default function ChatMessage({
             onLongPress?.(messageId, senderId, content);
           }}
         >
-          <p className="text-sm">{content}</p>
+          {imageUrl ? (
+            <button
+              type="button"
+              onClick={() => setViewingImage(imageUrl)}
+              className="block focus:outline-none"
+              aria-label="View full-size image"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt="Shared image"
+                className="max-w-[200px] max-h-[200px] rounded-xl object-cover"
+              />
+            </button>
+          ) : (
+            <p className="text-sm">{content}</p>
+          )}
         </div>
         <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 mx-1">{formattedTime}</span>
       </div>
+
+      {/* Full-screen image viewer */}
+      {viewingImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={() => setViewingImage(null)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setViewingImage(null); }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full-size image viewer"
+          tabIndex={-1}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={viewingImage}
+            alt="Full-size image"
+            className="max-w-full max-h-full object-contain"
+          />
+          <button
+            type="button"
+            onClick={() => setViewingImage(null)}
+            className="absolute top-4 right-4 text-white text-2xl leading-none focus:outline-none"
+            aria-label="Close image viewer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

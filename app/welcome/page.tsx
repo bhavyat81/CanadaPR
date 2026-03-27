@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -27,7 +27,7 @@ interface BlockedUser {
 }
 
 // ─── Accordion section IDs ────────────────────────────────────────────────────
-type SectionId = 'profile' | 'draws' | 'crs' | 'blocked' | null;
+type SectionId = 'profile' | 'draws' | 'crs' | 'blocked' | 'vault' | null;
 
 // ─── Chevron icon ─────────────────────────────────────────────────────────────
 function Chevron({ open }: { open: boolean }) {
@@ -54,6 +54,12 @@ export default function WelcomePage() {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
+
+  // Vault
+  const [vaultImages, setVaultImages] = useState<{ name: string; url: string }[]>([]);
+  const [loadingVault, setLoadingVault] = useState(false);
+  const [uploadingVault, setUploadingVault] = useState(false);
+  const vaultFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -128,6 +134,73 @@ export default function WelcomePage() {
 
     loadBlockedUsers();
   }, [openSection, user, blockedUsers.length]);
+
+  // Load vault images when that section is opened
+  const loadVaultImages = async () => {
+    if (!user) return;
+    setLoadingVault(true);
+    const { data, error } = await supabase.storage
+      .from('vault-images')
+      .list(`${user.id}/`, { limit: 100 });
+    if (!error && data) {
+      const images = data
+        .filter((f) => f.name !== '.emptyFolderPlaceholder')
+        .map((f) => {
+          const { data: urlData } = supabase.storage
+            .from('vault-images')
+            .getPublicUrl(`${user.id}/${f.name}`);
+          return { name: f.name, url: urlData.publicUrl };
+        });
+      setVaultImages(images);
+    } else {
+      setVaultImages([]);
+    }
+    setLoadingVault(false);
+  };
+
+  useEffect(() => {
+    if (openSection === 'vault') {
+      loadVaultImages();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSection, user]);
+
+  const handleVaultUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    e.target.value = '';
+
+    setUploadingVault(true);
+    const mimeExt = file.type.split('/')[1]?.toLowerCase().replace('jpeg', 'jpg') ?? '';
+    const allowedExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']);
+    const nameExt = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const ext = allowedExts.has(mimeExt) ? mimeExt : allowedExts.has(nameExt) ? nameExt : 'jpg';
+    const path = `${user.id}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('vault-images')
+      .upload(path, file, { upsert: false });
+
+    setUploadingVault(false);
+
+    if (uploadError) {
+      console.error('Failed to upload vault image:', uploadError);
+      return;
+    }
+
+    await loadVaultImages();
+  };
+
+  const handleVaultDelete = async (imageName: string) => {
+    if (!user) return;
+    const path = `${user.id}/${imageName}`;
+    const { error } = await supabase.storage.from('vault-images').remove([path]);
+    if (error) {
+      console.error('Failed to delete vault image:', error);
+      return;
+    }
+    setVaultImages((prev) => prev.filter((img) => img.name !== imageName));
+  };
 
   const handleUnblock = async (blockId: string) => {
     if (!user || unblockingId) return;
@@ -395,6 +468,75 @@ export default function WelcomePage() {
                         className="text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 transition-colors"
                       >
                         {unblockingId === bu.id ? 'Unblocking...' : 'Unblock'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── 5. My Vault ───────────────────────────────────────────────── */}
+        {/* Hidden file input for vault uploads */}
+        <input
+          ref={vaultFileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleVaultUpload}
+        />
+        <div className={sectionCardClass}>
+          <button
+            onClick={() => toggleSection('vault')}
+            className={sectionHeaderClass}
+            aria-expanded={openSection === 'vault'}
+          >
+            <span className="flex items-center gap-3 text-gray-800 dark:text-white font-semibold">
+              <span className="text-xl">🔒</span> My Vault
+            </span>
+            <Chevron open={openSection === 'vault'} />
+          </button>
+
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${
+              openSection === 'vault' ? 'max-h-[9999px]' : 'max-h-0'
+            }`}
+          >
+            <div className="px-5 pb-5 border-t dark:border-gray-700 pt-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Store private photos here. Only you can see them.
+              </p>
+              <button
+                onClick={() => vaultFileInputRef.current?.click()}
+                disabled={uploadingVault}
+                className="mb-4 inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                {uploadingVault ? 'Uploading…' : '+ Add Photo'}
+              </button>
+
+              {loadingVault ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+              ) : vaultImages.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No photos yet. Tap &quot;+ Add Photo&quot; to add one.
+                </p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {vaultImages.map((img) => (
+                    <div key={img.name} className="relative group aspect-square">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img.url}
+                        alt="Vault photo"
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                      <button
+                        onClick={() => handleVaultDelete(img.name)}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete photo"
+                      >
+                        ✕
                       </button>
                     </div>
                   ))}
