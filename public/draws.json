@@ -1,0 +1,145 @@
+{
+  "lastUpdated": "2025-03-20",
+  "draws": [
+    {
+      "drawNumber": 325,
+      "date": "2025-03-19",
+      "program": "Canadian Experience Class",
+      "crsScore": 491,
+      "invitations": 4300
+    },
+    {
+      "drawNumber": 324,
+      "date": "2025-03-05",
+      "program": "Federal Skilled Worker",
+      "crsScore": 524,
+      "invitations": 1000
+    },
+    {
+      "drawNumber": 323,
+      "date": "2025-02-19",
+      "program": "Canadian Experience Class",
+      "crsScore": 496,
+      "invitations": 4250
+    },
+    {
+      "drawNumber": 322,
+      "date": "2025-02-05",
+      "program": "Provincial Nominee Program",
+      "crsScore": 790,
+      "invitations": 765
+    },
+    {
+      "drawNumber": 321,
+      "date": "2025-01-22",
+      "program": "Canadian Experience Class",
+      "crsScore": 502,
+      "invitations": 3850
+    },
+    {
+      "drawNumber": 320,
+      "date": "2025-01-08",
+      "program": "No Limits Draw (All Programs)",
+      "crsScore": 481,
+      "invitations": 5500
+    },
+    {
+      "drawNumber": 319,
+      "date": "2024-12-18",
+      "program": "Canadian Experience Class",
+      "crsScore": 508,
+      "invitations": 3900
+    },
+    {
+      "drawNumber": 318,
+      "date": "2024-12-04",
+      "program": "Federal Skilled Trades",
+      "crsScore": 430,
+      "invitations": 500
+    },
+    {
+      "drawNumber": 317,
+      "date": "2024-11-20",
+      "program": "Canadian Experience Class",
+      "crsScore": 511,
+      "invitations": 4000
+    },
+    {
+      "drawNumber": 316,
+      "date": "2024-11-06",
+      "program": "Provincial Nominee Program",
+      "crsScore": 795,
+      "invitations": 620
+    },
+    {
+      "drawNumber": 315,
+      "date": "2024-10-23",
+      "program": "Canadian Experience Class",
+      "crsScore": 509,
+      "invitations": 4000
+    },
+    {
+      "drawNumber": 314,
+      "date": "2024-10-09",
+      "program": "STEM Occupations",
+      "crsScore": 486,
+      "invitations": 3800
+    },
+    {
+      "drawNumber": 313,
+      "date": "2024-09-25",
+      "program": "Canadian Experience Class",
+      "crsScore": 515,
+      "invitations": 3700
+    },
+    {
+      "drawNumber": 312,
+      "date": "2024-09-11",
+      "program": "No Limits Draw (All Programs)",
+      "crsScore": 504,
+      "invitations": 4000
+    },
+    {
+      "drawNumber": 311,
+      "date": "2024-08-28",
+      "program": "Canadian Experience Class",
+      "crsScore": 519,
+      "invitations": 3500
+    },
+    {
+      "drawNumber": 310,
+      "date": "2024-08-14",
+      "program": "Provincial Nominee Program",
+      "crsScore": 791,
+      "invitations": 800
+    },
+    {
+      "drawNumber": 309,
+      "date": "2024-07-31",
+      "program": "Canadian Experience Class",
+      "crsScore": 517,
+      "invitations": 3600
+    },
+    {
+      "drawNumber": 308,
+      "date": "2024-07-17",
+      "program": "Healthcare Occupations",
+      "crsScore": 430,
+      "invitations": 3300
+    },
+    {
+      "drawNumber": 307,
+      "date": "2024-07-03",
+      "program": "Canadian Experience Class",
+      "crsScore": 522,
+      "invitations": 3300
+    },
+    {
+      "drawNumber": 306,
+      "date": "2024-06-19",
+      "program": "No Limits Draw (All Programs)",
+      "crsScore": 525,
+      "invitations": 2000
+    }
+  ]
+}

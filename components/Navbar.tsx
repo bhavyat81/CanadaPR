@@ -35,6 +35,7 @@ export default function Navbar() {
               <>
                 <Link href="/welcome" className="hover:text-red-200 transition-colors">Home</Link>
                 <Link href="/groups" className="hover:text-red-200 transition-colors">Groups</Link>
+                <Link href="/draws" className="hover:text-red-200 transition-colors">Draws</Link>
                 <Link href="/profile" className="hover:text-red-200 transition-colors">My Profile</Link>
                 <span className="text-red-200 text-sm truncate max-w-[150px]">{user.email}</span>
                 <button
@@ -86,6 +87,9 @@ export default function Navbar() {
                 </Link>
                 <Link href="/groups" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
                   Groups
+                </Link>
+                <Link href="/draws" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
+                  Draws
                 </Link>
                 <Link href="/profile" onClick={closeMenu} className="block hover:text-red-200 transition-colors">
                   My Profile

@@ -4,11 +4,14 @@ interface MessageActionSheetProps {
   isOwnMessage: boolean;
   isAdmin?: boolean;
   canEditOrDelete?: boolean;
+  isPinned?: boolean;
   onReport: () => void;
   onBlock: () => void;
   onDeleteMessage?: () => void;
   onEditOwnMessage?: () => void;
   onDeleteOwnMessage?: () => void;
+  onPinMessage?: () => void;
+  onUnpinMessage?: () => void;
   onClose: () => void;
 }
 
@@ -16,11 +19,14 @@ export default function MessageActionSheet({
   isOwnMessage,
   isAdmin,
   canEditOrDelete,
+  isPinned,
   onReport,
   onBlock,
   onDeleteMessage,
   onEditOwnMessage,
   onDeleteOwnMessage,
+  onPinMessage,
+  onUnpinMessage,
   onClose,
 }: MessageActionSheetProps) {
   return (
@@ -110,6 +116,40 @@ export default function MessageActionSheet({
                 <div className="text-xs text-gray-500">
                   Hide all messages from this user
                 </div>
+              </div>
+            </button>
+
+            <div className="h-px bg-gray-100 mx-6" />
+          </>
+        )}
+
+        {isAdmin && !isPinned && onPinMessage && (
+          <>
+            <button
+              onClick={onPinMessage}
+              className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-xl">📌</span>
+              <div>
+                <div className="text-sm font-semibold text-gray-800">Pin Message</div>
+                <div className="text-xs text-gray-500">Pin this message for everyone</div>
+              </div>
+            </button>
+
+            <div className="h-px bg-gray-100 mx-6" />
+          </>
+        )}
+
+        {isAdmin && isPinned && onUnpinMessage && (
+          <>
+            <button
+              onClick={onUnpinMessage}
+              className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+            >
+              <span className="text-xl">📌</span>
+              <div>
+                <div className="text-sm font-semibold text-orange-600">Unpin Message</div>
+                <div className="text-xs text-gray-500">Remove this pin</div>
               </div>
             </button>
 
