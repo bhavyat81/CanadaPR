@@ -541,9 +541,27 @@ export default function CategoryChat({
     setMessages((prev) => prev.filter((m) => m.sender_id !== targetId));
   };
 
+  // Extracts the storage bucket path from a [image:URL] message.
+  // Returns null if the message is not an image or the URL is not from chat-images.
+  const extractChatImagePath = (content: string): string | null => {
+    const match = content.match(/^\[image:(.*)\]$/);
+    if (!match) return null;
+    const url = match[1];
+    // Skip vault images — they live in vault-images bucket and should not be deleted
+    if (url.includes('vault-images')) return null;
+    const marker = '/storage/v1/object/public/chat-images/';
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return url.substring(idx + marker.length);
+  };
+
   // Admin: delete a specific message
   const handleAdminDeleteMessage = async (messageId: string) => {
     setActionSheet(null);
+
+    // Find the message before deleting so we can clean up storage
+    const msg = messages.find((m) => m.id === messageId);
+
     const { error } = await supabase.rpc('admin_delete_message', {
       message_id_param: messageId,
     });
@@ -551,6 +569,18 @@ export default function CategoryChat({
       console.error('Failed to delete message:', error);
       return;
     }
+
+    // If the message contained a chat image, also delete it from storage
+    if (msg) {
+      const imagePath = extractChatImagePath(msg.content);
+      if (imagePath) {
+        const { error: storageError } = await supabase.storage.from('chat-images').remove([imagePath]);
+        if (storageError) {
+          console.error('Failed to delete chat image from storage:', storageError);
+        }
+      }
+    }
+
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
   };
 
@@ -558,6 +588,10 @@ export default function CategoryChat({
   const handleDeleteOwnMessage = async (messageId: string) => {
     if (!user) return;
     setActionSheet(null);
+
+    // Find the message before deleting so we can clean up storage
+    const msg = messages.find((m) => m.id === messageId);
+
     const { error } = await supabase
       .from('messages')
       .delete()
@@ -567,6 +601,18 @@ export default function CategoryChat({
       console.error('Failed to delete own message:', error);
       return;
     }
+
+    // If the message contained a chat image, also delete it from storage
+    if (msg) {
+      const imagePath = extractChatImagePath(msg.content);
+      if (imagePath) {
+        const { error: storageError } = await supabase.storage.from('chat-images').remove([imagePath]);
+        if (storageError) {
+          console.error('Failed to delete chat image from storage:', storageError);
+        }
+      }
+    }
+
     setMessages((prev) => prev.filter((m) => m.id !== messageId));
   };
 
