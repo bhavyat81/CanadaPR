@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import LatestDrawCard from '@/components/LatestDrawCard';
 
 function AccordionSection({
+  id,
   title,
   isOpen,
   onToggle,
@@ -19,7 +20,7 @@ function AccordionSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
+    <div id={id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"

@@ -571,7 +571,10 @@ export default function CategoryChat({
           </div>
           <MembersPanel members={members} />
           <button
-            onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}
+            onClick={() => {
+              if (showSearch) setSearchQuery('');
+              setShowSearch(s => !s);
+            }}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-colors"
             title="Search messages"
           >
