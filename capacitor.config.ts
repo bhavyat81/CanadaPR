@@ -21,7 +21,7 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
     Keyboard: {
-      resize: KeyboardResize.Body,
+      resize: KeyboardResize.None,
       resizeOnFullScreen: true,
     },
   },

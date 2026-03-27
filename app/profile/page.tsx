@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [blockedUsers, setBlockedUsers] = useState<{ blocked_id: string; display_name: string }[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -65,6 +66,24 @@ export default function ProfilePage() {
           }
         });
         setStepDates((prev) => ({ ...prev, ...dates }));
+      }
+
+      // Load blocked users
+      const { data: blocks } = await supabase
+        .from('blocks')
+        .select('blocked_id')
+        .eq('blocker_id', user.id);
+
+      if (blocks && blocks.length > 0) {
+        const blockedIds = blocks.map((b: { blocked_id: string }) => b.blocked_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', blockedIds);
+
+        if (profiles) {
+          setBlockedUsers(profiles.map((p: { id: string; display_name: string }) => ({ blocked_id: p.id, display_name: p.display_name })));
+        }
       }
     };
 
@@ -176,6 +195,22 @@ export default function ProfilePage() {
 
   const handleStepDate = (step: string, value: string) => {
     setStepDates((prev) => ({ ...prev, [step]: value }));
+  };
+
+  const handleUnblock = async (blockedId: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('blocks')
+      .delete()
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', blockedId);
+
+    if (error) {
+      console.error('Failed to unblock user:', error);
+      setError('Failed to unblock user. Please try again.');
+    } else {
+      setBlockedUsers((prev) => prev.filter((u) => u.blocked_id !== blockedId));
+    }
   };
 
   if (authLoading) {
@@ -336,6 +371,30 @@ export default function ProfilePage() {
             {loading ? 'Saving...' : 'Save Profile'}
           </button>
         </form>
+
+        {/* Blocked Users Section */}
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
+            🚫 Blocked Users
+          </h2>
+          {blockedUsers.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500">You haven&apos;t blocked anyone.</p>
+          ) : (
+            <div className="space-y-2">
+              {blockedUsers.map((u) => (
+                <div key={u.blocked_id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-3">
+                  <span className="text-sm text-gray-800 dark:text-gray-200">@{u.display_name ?? 'Unknown User'}</span>
+                  <button
+                    onClick={() => handleUnblock(u.blocked_id)}
+                    className="text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                  >
+                    Unblock
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Delete Account Section */}
         <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">

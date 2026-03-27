@@ -7,11 +7,9 @@ interface ChatInputProps {
   disabled?: boolean;
   editingMessage?: { id: string; content: string } | null;
   onCancelEdit?: () => void;
-  /** Extra bottom padding (in px) injected by parent when the Capacitor keyboard is open. */
-  keyboardHeight?: number;
 }
 
-export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, keyboardHeight = 0 }: ChatInputProps) {
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,13 +39,8 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
 
   const isEditing = !!editingMessage;
 
-  // When keyboard is open, shift the input above the keyboard using inline style.
-  // CSS env(safe-area-inset-bottom) handles iPhone notch/home-indicator spacing.
-  const bottomOffset = keyboardHeight > 0 ? keyboardHeight : undefined;
-
   return (
     <div
-      style={bottomOffset !== undefined ? { paddingBottom: bottomOffset } : undefined}
       className="bg-white dark:bg-gray-800"
     >
       {isEditing && (
