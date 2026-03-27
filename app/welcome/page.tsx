@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { JOURNEY_STEPS, VISA_OFFICE_STEPS, VISA_OFFICES } from '@/lib/categories';
+import { initPushNotifications } from '@/lib/notifications';
 
 const SUCCESS_REDIRECT_DELAY = 1500;
 
@@ -28,6 +29,10 @@ export default function WelcomePage() {
   const [loadingBlocked, setLoadingBlocked] = useState(true);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
 
+  // Notifications state
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
@@ -40,7 +45,7 @@ export default function WelcomePage() {
     const loadProfile = async () => {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('display_name')
+        .select('display_name, notifications_enabled')
         .eq('id', user.id)
         .single();
 
@@ -50,6 +55,7 @@ export default function WelcomePage() {
       }
 
       setDisplayName(profile.display_name);
+      setNotificationsEnabled(profile.notifications_enabled !== false);
     };
 
     loadProfile();
@@ -118,6 +124,25 @@ export default function WelcomePage() {
   };
 
   const isVisaOfficeStep = VISA_OFFICE_STEPS.includes(selectedStep);
+
+  const handleNotificationsToggle = async () => {
+    if (!user || savingNotifications) return;
+    setSavingNotifications(true);
+    const newValue = !notificationsEnabled;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ notifications_enabled: newValue, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    if (!error) {
+      setNotificationsEnabled(newValue);
+      if (newValue) {
+        await initPushNotifications(user.id);
+      }
+    }
+    setSavingNotifications(false);
+  };
 
   const handleSave = async () => {
     if (!user || !selectedStep || !selectedValue) return;
@@ -331,6 +356,33 @@ export default function WelcomePage() {
               <div className="text-5xl mb-4">🎉</div>
               <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Profile updated!</h2>
               <p className="text-gray-500 dark:text-gray-400">Redirecting you to the groups...</p>
+            </div>
+          )}
+
+          {/* Notifications toggle (always visible below step wizard) */}
+          {step !== 4 && (
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔔</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-white">Notifications</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Get notified about new messages</p>
+                </div>
+              </div>
+              <button
+                onClick={handleNotificationsToggle}
+                disabled={savingNotifications}
+                aria-label={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 ${
+                  notificationsEnabled ? 'bg-red-600' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    notificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
           )}
         </div>

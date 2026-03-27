@@ -14,6 +14,7 @@ import AdminActionSheet from '@/components/AdminActionSheet';
 import ReportModal from '@/components/ReportModal';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
+import { showLocalNotification } from '@/lib/notifications';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
@@ -193,6 +194,70 @@ export default function CategoryChat({
       .then(({ data }) => {
         if (data) setPinnedMessages(data as PinnedMessage[]);
       });
+  }, [user, groupKey]);
+
+  // Subscribe to messages in other joined groups and show local notifications
+  useEffect(() => {
+    if (!user) return;
+
+    let mounted = true;
+    const channels: ReturnType<typeof supabase.channel>[] = [];
+
+    const setupOtherGroupSubscriptions = async () => {
+      const { data: memberships } = await supabase
+        .from('group_members')
+        .select('group_key')
+        .eq('user_id', user.id);
+
+      if (!mounted || !memberships) return;
+
+      const otherGroups = memberships
+        .map((m: { group_key: string }) => m.group_key)
+        .filter((key: string) => key !== groupKey);
+
+      for (const otherGroupKey of otherGroups) {
+        const channel = supabase
+          .channel(`notifications:${otherGroupKey}:${user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+              filter: `group_month=eq.${otherGroupKey}`,
+            },
+            (payload) => {
+              if (!mounted) return;
+              const msg = payload.new as Message;
+              if (msg.sender_id === user.id) return;
+              if (blockedIdsRef.current.has(msg.sender_id)) return;
+
+              // Build a human-readable group name from the group key
+              const parts = otherGroupKey.split('_');
+              const month = parts.length >= 2 ? formatMonth(parts[parts.length - 1]) : otherGroupKey;
+              const category = parts.length >= 2
+                ? getCategoryShortLabel(parts.slice(0, -1).join('_')) ?? parts.slice(0, -1).join(' ')
+                : otherGroupKey;
+
+              showLocalNotification({
+                title: `New message in ${category} · ${month}`,
+                body: `${msg.sender_name}: ${msg.content.slice(0, 100)}`,
+                data: { group_month: otherGroupKey, message_id: msg.id },
+              });
+            }
+          )
+          .subscribe();
+
+        channels.push(channel);
+      }
+    };
+
+    setupOtherGroupSubscriptions();
+
+    return () => {
+      mounted = false;
+      channels.forEach((ch) => supabase.removeChannel(ch));
+    };
   }, [user, groupKey]);
 
   // Close search on Escape key
