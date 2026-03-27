@@ -33,6 +33,17 @@ interface Member {
   display_name: string;
 }
 
+interface PinnedMessage {
+  id: string;
+  message_id: string;
+  room_key: string;
+  pinned_by: string;
+  pinned_at: string;
+  message_content: string;
+  sender_name: string;
+  sender_id: string;
+}
+
 export default function CategoryChat({
   category,
   month,
@@ -80,6 +91,15 @@ export default function CategoryChat({
   } | null>(null);
   // Edit mode for own messages
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
+
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Pinned messages state
+  const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
+  const [showPinnedPanel, setShowPinnedPanel] = useState(false);
 
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
@@ -161,6 +181,31 @@ export default function CategoryChat({
         }
       });
   }, [user]);
+
+  // Load pinned messages for this room
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('pinned_messages')
+      .select('*')
+      .eq('room_key', groupKey)
+      .order('pinned_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setPinnedMessages(data as PinnedMessage[]);
+      });
+  }, [user, groupKey]);
+
+  // Close search on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false);
+        setSearchQuery('');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchOpen]);
 
   // Load roles for a list of sender IDs (skips already-loaded ones)
   const loadSenderRoles = useCallback(async (senderIds: string[]) => {
@@ -471,6 +516,52 @@ export default function CategoryChat({
     setSenderRoles((prev) => ({ ...prev, [targetUserId]: 'member' }));
   };
 
+  // Admin: pin a message
+  const handlePinMessage = async () => {
+    if (!user || !actionSheet) return;
+    const { messageId, content, senderId } = actionSheet;
+    const senderName = messages.find((m) => m.id === messageId)?.sender_name ?? '';
+    setActionSheet(null);
+    const { error, data } = await supabase
+      .from('pinned_messages')
+      .insert({
+        message_id: messageId,
+        room_key: groupKey,
+        pinned_by: user.id,
+        message_content: content,
+        sender_name: senderName,
+        sender_id: senderId,
+      })
+      .select()
+      .single();
+    if (error) {
+      console.error('Failed to pin message:', error);
+      return;
+    }
+    if (data) setPinnedMessages((prev) => [data as PinnedMessage, ...prev]);
+  };
+
+  // Admin: unpin a message by pinned_messages row id
+  const handleUnpinMessage = async (pinnedMessageId: string) => {
+    const { error } = await supabase
+      .from('pinned_messages')
+      .delete()
+      .eq('id', pinnedMessageId);
+    if (error) {
+      console.error('Failed to unpin message:', error);
+      return;
+    }
+    setPinnedMessages((prev) => prev.filter((p) => p.id !== pinnedMessageId));
+  };
+
+  // Admin: unpin via action sheet
+  const handleUnpinFromActionSheet = async () => {
+    if (!actionSheet) return;
+    const pinned = pinnedMessages.find((p) => p.message_id === actionSheet.messageId);
+    setActionSheet(null);
+    if (pinned) await handleUnpinMessage(pinned.id);
+  };
+
   const handleSendMessage = async (content: string) => {
     // If in edit mode, route to update handler instead
     if (editingMessage) {
@@ -533,6 +624,14 @@ export default function CategoryChat({
   const visibleMessages = messages.filter((m) => !blockedIds.has(m.sender_id));
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
+  // Search filtering
+  const searchTrimmed = searchQuery.trim().toLowerCase();
+  const searchFilteredMessages = searchTrimmed
+    ? visibleMessages.filter((m) => m.content.toLowerCase().includes(searchTrimmed))
+    : visibleMessages;
+  const displayMessages = searchOpen ? searchFilteredMessages : visibleMessages;
+  const pinnedMessageIds = new Set(pinnedMessages.map((p) => p.message_id));
+
   return (
     <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
       {/* Chat Header */}
@@ -547,6 +646,30 @@ export default function CategoryChat({
             </p>
           </div>
           <MembersPanel members={members} />
+          {/* Pinned messages button */}
+          <button
+            onClick={() => setShowPinnedPanel(true)}
+            title="View pinned messages"
+            className="text-gray-400 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors text-xl px-1"
+          >
+            📌
+          </button>
+          {/* Search button */}
+          <button
+            onClick={() => {
+              setSearchOpen((prev) => {
+                if (!prev) setTimeout(() => searchInputRef.current?.focus(), 50);
+                return !prev;
+              });
+              setSearchQuery('');
+            }}
+            title="Search messages"
+            className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors px-1"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
           {isMember && (
             <button
               onClick={() => setShowLeaveConfirm(true)}
@@ -563,6 +686,38 @@ export default function CategoryChat({
             ← Back
           </button>
         </div>
+
+        {/* Search bar (shown when search is open) */}
+        {searchOpen && (
+          <div className="max-w-4xl mx-auto mt-2">
+            <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl px-3 py-2">
+              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="flex-1 bg-transparent text-sm text-gray-800 dark:text-white outline-none placeholder-gray-400 dark:placeholder-gray-500"
+              />
+              {searchQuery && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                  {searchFilteredMessages.length} result{searchFilteredMessages.length !== 1 ? 's' : ''}
+                </span>
+              )}
+              <button
+                onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Leave Group Confirmation Modal */}
@@ -596,7 +751,13 @@ export default function CategoryChat({
         <div className="max-w-4xl mx-auto">
           {loadingMessages ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-8">Loading messages...</div>
-          ) : visibleMessages.length === 0 ? (
+          ) : searchOpen && searchTrimmed && displayMessages.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-5xl mb-4">🔍</div>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No messages found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">No messages match &ldquo;{searchQuery}&rdquo;</p>
+            </div>
+          ) : !searchOpen && visibleMessages.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">💬</div>
               <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No messages yet</h3>
@@ -605,7 +766,7 @@ export default function CategoryChat({
               </p>
             </div>
           ) : (
-            visibleMessages.map((msg) => (
+            displayMessages.map((msg) => (
               <ChatMessage
                 key={msg.id}
                 messageId={msg.id}
@@ -626,8 +787,8 @@ export default function CategoryChat({
                   }
                 }}
                 onLongPress={(messageId, senderId, content) => {
-                  const msg = messages.find((m) => m.id === messageId);
-                  setActionSheet({ messageId, senderId, content, createdAt: msg?.created_at ?? new Date().toISOString() });
+                  const targetMsg = messages.find((m) => m.id === messageId);
+                  setActionSheet({ messageId, senderId, content, createdAt: targetMsg?.created_at ?? new Date().toISOString() });
                 }}
               />
             ))
@@ -702,6 +863,7 @@ export default function CategoryChat({
             actionSheet.senderId === user?.id &&
             Date.now() - new Date(actionSheet.createdAt).getTime() < EDIT_DELETE_WINDOW_MS
           }
+          isPinned={pinnedMessageIds.has(actionSheet.messageId)}
           onReport={() => {
             setReportTarget(actionSheet);
             setActionSheet(null);
@@ -713,6 +875,8 @@ export default function CategoryChat({
             setActionSheet(null);
           }}
           onDeleteOwnMessage={() => handleDeleteOwnMessage(actionSheet.messageId)}
+          onPinMessage={handlePinMessage}
+          onUnpinMessage={handleUnpinFromActionSheet}
           onClose={() => setActionSheet(null)}
         />
       )}
@@ -741,6 +905,73 @@ export default function CategoryChat({
           groupMonth={groupKey}
           onClose={() => setReportTarget(null)}
         />
+      )}
+
+      {/* Pinned Messages Panel */}
+      {showPinnedPanel && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40"
+          onClick={() => setShowPinnedPanel(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[75vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Panel header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📌</span>
+                <h2 className="font-bold text-gray-800 dark:text-white">Pinned Messages</h2>
+                {pinnedMessages.length > 0 && (
+                  <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">
+                    {pinnedMessages.length}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowPinnedPanel(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Panel content */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {pinnedMessages.length === 0 ? (
+                <div className="text-center py-10">
+                  <div className="text-4xl mb-3">📌</div>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No pinned messages yet</p>
+                </div>
+              ) : (
+                pinnedMessages.map((pin) => (
+                  <div key={pin.id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+                    <p className="text-sm text-gray-800 dark:text-white leading-relaxed">{pin.message_content}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{pin.sender_name}</span>
+                        {' · '}
+                        {new Date(pin.pinned_at).toLocaleDateString()}
+                      </div>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleUnpinMessage(pin.id)}
+                          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors font-medium"
+                        >
+                          Unpin
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="h-6" />
+          </div>
+        </div>
       )}
     </div>
   );
