@@ -25,6 +25,7 @@ interface Message {
   sender_id: string;
   sender_name: string;
   content: string;
+  image_url?: string;
   created_at: string;
 }
 
@@ -471,7 +472,7 @@ export default function CategoryChat({
     setSenderRoles((prev) => ({ ...prev, [targetUserId]: 'member' }));
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, imageUrl?: string) => {
     // If in edit mode, route to update handler instead
     if (editingMessage) {
       await handleUpdateOwnMessage(content);
@@ -487,19 +488,23 @@ export default function CategoryChat({
       sender_id: user.id,
       sender_name: userProfile.display_name,
       content,
+      image_url: imageUrl,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimisticMessage]);
     setSendError(null);
 
+    const insertPayload: Record<string, unknown> = {
+      group_month: groupKey,
+      sender_id: user.id,
+      sender_name: userProfile.display_name,
+      content,
+    };
+    if (imageUrl) insertPayload.image_url = imageUrl;
+
     const { error, data } = await supabase
       .from('messages')
-      .insert({
-        group_month: groupKey,
-        sender_id: user.id,
-        sender_name: userProfile.display_name,
-        content,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -514,8 +519,8 @@ export default function CategoryChat({
 
   if (authLoading || termsAccepted === null) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-gray-500 dark:text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -534,15 +539,15 @@ export default function CategoryChat({
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
+    <div className="flex flex-col dark:bg-slate-900" style={{ height: 'calc(100dvh - 64px)' }}>
       {/* Chat Header */}
-      <div className="bg-white border-b px-4 py-3 sm:py-4 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-slate-100 truncate">
               🇨🇦 {displayMonth} Chat
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 truncate">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 truncate">
               {categoryShort} · {decodedMonth} applicants
             </p>
           </div>
@@ -558,7 +563,7 @@ export default function CategoryChat({
           )}
           <button
             onClick={() => router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`)}
-            className="text-red-600 hover:text-red-700 font-medium text-sm whitespace-nowrap"
+            className="text-red-600 dark:text-red-400 hover:text-red-700 font-medium text-sm whitespace-nowrap"
           >
             ← Back
           </button>
@@ -567,16 +572,16 @@ export default function CategoryChat({
 
       {/* Leave Group Confirmation Modal */}
       {showLeaveConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Leave this group?</h2>
-            <p className="text-gray-600 text-sm mb-6">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 border border-transparent dark:border-slate-700">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-2">Leave this group?</h2>
+            <p className="text-gray-600 dark:text-slate-400 text-sm mb-6">
               Are you sure you want to leave this group? You can always rejoin later.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowLeaveConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               >
                 Cancel
               </button>
@@ -591,16 +596,56 @@ export default function CategoryChat({
         </div>
       )}
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 px-3 sm:px-4 py-4">
-        <div className="max-w-4xl mx-auto">
+      {/* Messages Area — Toronto skyline background */}
+      <div
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 relative"
+        style={{
+          background: 'var(--chat-bg, #f9fafb)',
+        }}
+      >
+        {/* Toronto skyline silhouette (subtle, ~12% opacity) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed bottom-16 left-0 right-0 z-0 flex justify-center"
+          style={{ opacity: 0.12 }}
+        >
+          <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg" className="w-full max-w-2xl" preserveAspectRatio="xMidYMax meet">
+            {/* Toronto skyline silhouette */}
+            <g fill="currentColor" className="text-gray-600 dark:text-slate-300">
+              {/* CN Tower */}
+              <rect x="380" y="20" width="8" height="180"/>
+              <polygon points="384,10 376,50 392,50"/>
+              <rect x="375" y="50" width="18" height="15"/>
+              {/* Rogers Centre dome */}
+              <ellipse cx="360" cy="190" rx="30" ry="12"/>
+              <rect x="330" y="155" width="60" height="35"/>
+              {/* Buildings left side */}
+              <rect x="50" y="100" width="40" height="100"/>
+              <rect x="100" y="80" width="50" height="120"/>
+              <rect x="160" y="110" width="35" height="90"/>
+              <rect x="205" y="90" width="45" height="110"/>
+              <rect x="260" y="120" width="30" height="80"/>
+              <rect x="300" y="70" width="55" height="130"/>
+              {/* Buildings right side */}
+              <rect x="420" y="85" width="45" height="115"/>
+              <rect x="475" y="105" width="35" height="95"/>
+              <rect x="520" y="75" width="50" height="125"/>
+              <rect x="580" y="95" width="40" height="105"/>
+              <rect x="630" y="115" width="30" height="85"/>
+              <rect x="670" y="80" width="45" height="120"/>
+              <rect x="725" y="100" width="35" height="100"/>
+            </g>
+          </svg>
+        </div>
+
+        <div className="max-w-4xl mx-auto relative z-10">
           {loadingMessages ? (
-            <div className="text-center text-gray-500 py-8">Loading messages...</div>
+            <div className="text-center text-gray-500 dark:text-slate-400 py-8">Loading messages...</div>
           ) : visibleMessages.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">💬</div>
-              <h3 className="text-lg font-semibold text-gray-700">No messages yet</h3>
-              <p className="text-gray-500 mt-2">
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300">No messages yet</h3>
+              <p className="text-gray-500 dark:text-slate-400 mt-2">
                 Be the first to say hello to the {displayMonth} {categoryShort} group!
               </p>
             </div>
@@ -617,6 +662,7 @@ export default function CategoryChat({
                     : (senderRoles[msg.sender_id] ?? 'member')
                 }
                 content={msg.content}
+                imageUrl={msg.image_url}
                 createdAt={msg.created_at}
                 isOwnMessage={msg.sender_id === user?.id}
                 onClickUsername={setSelectedUserId}
@@ -639,7 +685,7 @@ export default function CategoryChat({
       {/* Chat Input */}
       <div className="max-w-4xl mx-auto w-full">
         {sendError && (
-          <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm flex items-center justify-between">
+          <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm flex items-center justify-between">
             <span>{sendError}</span>
             <button
               onClick={() => setSendError(null)}
@@ -650,7 +696,7 @@ export default function CategoryChat({
           </div>
         )}
         {!userProfile ? (
-          <div className="p-4 bg-yellow-50 border-t text-center text-yellow-800">
+          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-t dark:border-slate-700 text-center text-yellow-800 dark:text-yellow-300">
             Please{' '}
             <a href="/profile" className="font-medium underline">
               set up your profile
@@ -658,7 +704,7 @@ export default function CategoryChat({
             to send messages.
           </div>
         ) : isMember === false ? (
-          <div className="p-4 bg-blue-50 border-t text-center text-blue-800">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-t dark:border-slate-700 text-center text-blue-800 dark:text-blue-300">
             <p className="mb-2">Join this group to start chatting.</p>
             <button
               onClick={handleJoinGroup}
@@ -673,10 +719,9 @@ export default function CategoryChat({
             onSendMessage={handleSendMessage}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
-            userId={user?.id}
           />
         ) : (
-          <div className="p-4 border-t text-center text-gray-400 text-sm">Checking membership...</div>
+          <div className="p-4 border-t dark:border-slate-700 text-center text-gray-400 dark:text-slate-500 text-sm">Checking membership...</div>
         )}
       </div>
 

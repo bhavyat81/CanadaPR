@@ -25,22 +25,22 @@ export default function MembersPanel({ members }: MembersPanelProps) {
       <div className="relative">
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-300 rounded-lg px-3 py-1.5 bg-white hover:bg-red-50 transition-colors flex items-center gap-1"
+          className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 border border-red-300 dark:border-red-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
         >
           👥 Members ({members.length})
           <span className="text-xs">{expanded ? '▲' : '▼'}</span>
         </button>
 
         {expanded && (
-          <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-40 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <p className="text-sm font-semibold text-gray-700">
+          <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 z-40 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
+              <p className="text-sm font-semibold text-gray-700 dark:text-slate-200">
                 {members.length} applicant{members.length !== 1 ? 's' : ''} in this group
               </p>
             </div>
             <div className="max-h-64 overflow-y-auto">
               {sorted.length === 0 ? (
-                <p className="text-sm text-gray-400 px-4 py-3">No members yet</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500 px-4 py-3">No members yet</p>
               ) : (
                 sorted.map((member) => (
                   <button
@@ -49,10 +49,10 @@ export default function MembersPanel({ members }: MembersPanelProps) {
                       setExpanded(false);
                       setSelectedUserId(member.id);
                     }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-red-50 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-4 py-2.5 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
                   >
-                    <span className="text-sm text-gray-600">👤</span>
-                    <span className="text-sm font-medium text-gray-800 truncate">
+                    <span className="text-sm text-gray-600 dark:text-slate-400">👤</span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-slate-100 truncate">
                       {member.display_name}
                     </span>
                   </button>

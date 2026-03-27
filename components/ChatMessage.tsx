@@ -1,18 +1,7 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 
 const LONG_PRESS_DURATION = 500;
-
-/** Returns true if the string looks like a Supabase storage image URL */
-function isImageUrl(content: string): boolean {
-  try {
-    const url = new URL(content);
-    const lower = url.pathname.toLowerCase();
-    return /\.(jpg|jpeg|png|gif|webp|heic|heif)(\?|$)/.test(lower);
-  } catch {
-    return false;
-  }
-}
 
 function getRoleLabel(role: string): string {
   switch (role) {
@@ -31,6 +20,7 @@ interface ChatMessageProps {
   senderName: string;
   senderRole?: string;
   content: string;
+  imageUrl?: string;
   createdAt: string;
   isOwnMessage: boolean;
   onClickUsername?: (senderId: string) => void;
@@ -44,6 +34,7 @@ export default function ChatMessage({
   senderName,
   senderRole = 'member',
   content,
+  imageUrl,
   createdAt,
   isOwnMessage,
   onClickUsername,
@@ -55,13 +46,13 @@ export default function ChatMessage({
     minute: '2-digit',
   });
 
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   const baseName = isOwnMessage ? 'You' : senderName;
   const roleLabel = getRoleLabel(senderRole);
   const displayName = `${baseName} - ${roleLabel}`;
 
-  // Long-press support for message bubble
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Long-press support for username button
   const usernameLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -105,53 +96,77 @@ export default function ChatMessage({
   };
 
   return (
-    <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-4`}>
-      <button
-        className={`text-xs font-semibold mb-1 mx-1 hover:underline focus:outline-none ${
-          isOwnMessage ? 'text-red-600 text-right' : 'text-blue-600 text-left'
-        }`}
-        onClick={handleUsernameClick}
-        onTouchStart={handleUsernameTouchStart}
-        onTouchEnd={cancelUsernameLongPress}
-        onTouchMove={cancelUsernameLongPress}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onLongPressUsername?.(senderId, senderName, senderRole);
-        }}
-      >
-        {displayName}
-      </button>
-      <div
-        className={`max-w-[75%] rounded-2xl cursor-pointer select-none overflow-hidden ${
-          isImageUrl(content)
-            ? ''
-            : isOwnMessage
-            ? 'px-4 py-2 bg-red-600 text-white rounded-br-none'
-            : 'px-4 py-2 bg-gray-100 text-gray-800 rounded-bl-none'
-        }`}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={cancelLongPress}
-        onTouchMove={cancelLongPress}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onLongPress?.(messageId, senderId, content);
-        }}
-      >
-        {isImageUrl(content) ? (
-          <div className="relative w-48 h-48">
-            <Image
-              src={content}
-              alt="Shared image"
-              fill
-              className="object-cover rounded-2xl"
-              sizes="192px"
-            />
+    <>
+      {lightboxOpen && imageUrl && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <Image
+            src={imageUrl}
+            alt="Full size"
+            width={800}
+            height={800}
+            className="max-w-full max-h-full object-contain rounded-xl"
+            unoptimized
+          />
+        </div>
+      )}
+
+      <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-3`}>
+        <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+          <button
+            className={`text-xs font-semibold mb-1 hover:underline focus:outline-none ${
+              isOwnMessage ? 'text-red-600 dark:text-red-400 text-right' : 'text-blue-600 dark:text-blue-400 text-left'
+            }`}
+            onClick={handleUsernameClick}
+            onTouchStart={handleUsernameTouchStart}
+            onTouchEnd={cancelUsernameLongPress}
+            onTouchMove={cancelUsernameLongPress}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onLongPressUsername?.(senderId, senderName, senderRole);
+            }}
+          >
+            {displayName}
+          </button>
+
+          <div
+            className={`max-w-[75%] rounded-2xl shadow-sm cursor-pointer select-none ${
+              isOwnMessage
+                ? 'bg-red-600 dark:bg-red-900 text-white rounded-br-none'
+                : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100 rounded-bl-none'
+            } ${imageUrl && !content ? 'p-1' : 'px-4 py-2.5'}`}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={cancelLongPress}
+            onTouchMove={cancelLongPress}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onLongPress?.(messageId, senderId, content);
+            }}
+          >
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="block rounded-xl overflow-hidden"
+              >
+                <Image
+                  src={imageUrl}
+                  alt="Chat image"
+                  width={240}
+                  height={240}
+                  className="rounded-xl max-w-[240px] object-cover"
+                  unoptimized
+                />
+              </button>
+            )}
+            {content && <p className="text-sm">{content}</p>}
           </div>
-        ) : (
-          <p className="text-sm">{content}</p>
-        )}
+
+          <span className="text-xs text-gray-400 dark:text-slate-500 mt-1">{formattedTime}</span>
+        </div>
       </div>
-      <span className="text-xs text-gray-400 mt-1 mx-1">{formattedTime}</span>
-    </div>
+    </>
   );
 }
