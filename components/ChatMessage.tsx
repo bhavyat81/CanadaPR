@@ -1,6 +1,18 @@
 import { useRef, useEffect } from 'react';
+import Image from 'next/image';
 
 const LONG_PRESS_DURATION = 500;
+
+/** Returns true if the string looks like a Supabase storage image URL */
+function isImageUrl(content: string): boolean {
+  try {
+    const url = new URL(content);
+    const lower = url.pathname.toLowerCase();
+    return /\.(jpg|jpeg|png|gif|webp|heic|heif)(\?|$)/.test(lower);
+  } catch {
+    return false;
+  }
+}
 
 function getRoleLabel(role: string): string {
   switch (role) {
@@ -110,10 +122,12 @@ export default function ChatMessage({
         {displayName}
       </button>
       <div
-        className={`max-w-[75%] px-4 py-2 rounded-2xl cursor-pointer select-none ${
-          isOwnMessage
-            ? 'bg-red-600 text-white rounded-br-none'
-            : 'bg-gray-100 text-gray-800 rounded-bl-none'
+        className={`max-w-[75%] rounded-2xl cursor-pointer select-none overflow-hidden ${
+          isImageUrl(content)
+            ? ''
+            : isOwnMessage
+            ? 'px-4 py-2 bg-red-600 text-white rounded-br-none'
+            : 'px-4 py-2 bg-gray-100 text-gray-800 rounded-bl-none'
         }`}
         onTouchStart={handleTouchStart}
         onTouchEnd={cancelLongPress}
@@ -123,7 +137,19 @@ export default function ChatMessage({
           onLongPress?.(messageId, senderId, content);
         }}
       >
-        <p className="text-sm">{content}</p>
+        {isImageUrl(content) ? (
+          <div className="relative w-48 h-48">
+            <Image
+              src={content}
+              alt="Shared image"
+              fill
+              className="object-cover rounded-2xl"
+              sizes="192px"
+            />
+          </div>
+        ) : (
+          <p className="text-sm">{content}</p>
+        )}
       </div>
       <span className="text-xs text-gray-400 mt-1 mx-1">{formattedTime}</span>
     </div>
