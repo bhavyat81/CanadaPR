@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 interface DrawRound {
   DrawNumber: string;
@@ -86,8 +87,11 @@ export default function LatestDrawCard() {
             <div className="text-sm font-semibold text-gray-700 dark:text-slate-200 truncate">{draw.DrawName || 'General'}</div>
           </div>
         </div>
-        <div className="mt-2 text-right">
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700 flex items-center justify-between">
           <span className="text-xs text-gray-400 dark:text-slate-500">Draw #{draw.DrawNumber}</span>
+          <Link href="/draws" className="text-xs text-red-600 dark:text-red-400 hover:underline font-medium">
+            View all draws →
+          </Link>
         </div>
       </div>
     </div>
