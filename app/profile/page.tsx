@@ -240,10 +240,15 @@ export default function ProfilePage() {
 
     const loadBlockedUsers = async () => {
       setLoadingBlocked(true);
-      const { data } = await supabase
+      const { data, error: blockedError } = await supabase
         .from('blocked_users')
         .select('id, blocked_user_id, profiles!blocked_users_blocked_user_id_fkey(display_name)')
         .eq('user_id', user.id);
+      if (blockedError) {
+        // Table may not exist yet — silently ignore
+        setLoadingBlocked(false);
+        return;
+      }
       if (data) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setBlockedUsers(data.map((b: any) => ({

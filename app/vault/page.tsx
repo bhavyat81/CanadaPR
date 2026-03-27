@@ -66,16 +66,23 @@ export default function VaultPage() {
 
   useEffect(() => {
     if (user) loadFiles();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUpload = async (file: File) => {
     if (!user || !file) return;
     setUploading(true);
     setError('');
 
-    const ext = file.name.split('.').pop() || 'jpg';
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const rawExt = (file.name.split('.').pop() || '').toLowerCase();
+    const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'pdf'];
+    const ext = ALLOWED_EXTS.includes(rawExt) ? rawExt : '';
+    if (!ext) {
+      setError('File type not supported. Please upload an image (JPG, PNG, GIF, WEBP, HEIC) or PDF.');
+      setUploading(false);
+      return;
+    }
+    const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${originalName}`;
     const path = `${user.id}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -216,7 +223,7 @@ export default function VaultPage() {
                   )}
                 </button>
                 <div className="p-2">
-                  <p className="text-xs text-gray-600 dark:text-slate-300 truncate">{file.name.replace(/^\d+-[a-z0-9]+\./, '')}</p>
+                  <p className="text-xs text-gray-600 dark:text-slate-300 truncate">{file.name.replace(/^\d+-[a-z0-9]+-/, '')}</p>
                   {file.size && <p className="text-xs text-gray-400 dark:text-slate-500">{formatSize(file.size)}</p>}
                   <div className="flex gap-1 mt-2">
                     <button

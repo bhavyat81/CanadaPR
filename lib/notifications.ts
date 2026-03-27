@@ -15,7 +15,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 export function showNotification(title: string, body: string, icon?: string) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
-  if (document.hasFocus()) return;
+  if (document.visibilityState === 'visible') return;
 
   try {
     new Notification(title, {
