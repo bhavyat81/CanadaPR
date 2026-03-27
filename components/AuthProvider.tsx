@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { initPushNotifications, removeDeviceToken } from '@/lib/notifications';
+const loadNotifications = () => import('@/lib/notifications');
 
 interface AuthContextType {
   user: User | null;
@@ -34,19 +34,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         if (event === 'SIGNED_IN' && session?.user) {
           userRef.current = session.user;
-          initPushNotifications(session.user.id);
+          try {
+            const { initPushNotifications } = await loadNotifications();
+            await initPushNotifications(session.user.id);
+          } catch (err) {
+            console.error('Failed to initialize push notifications:', err);
+          }
         } else if (event === 'SIGNED_OUT') {
           const previousUser = userRef.current;
           userRef.current = null;
           if (previousUser) {
-            removeDeviceToken(previousUser.id);
+            try {
+              const { removeDeviceToken } = await loadNotifications();
+              await removeDeviceToken(previousUser.id);
+            } catch (err) {
+              console.error('Failed to remove device token:', err);
+            }
           }
         }
       }
