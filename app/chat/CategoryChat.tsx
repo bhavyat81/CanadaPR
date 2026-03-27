@@ -12,6 +12,7 @@ import TermsAcceptanceModal from '@/components/TermsAcceptanceModal';
 import MessageActionSheet from '@/components/MessageActionSheet';
 import AdminActionSheet from '@/components/AdminActionSheet';
 import ReportModal from '@/components/ReportModal';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 
@@ -81,6 +82,14 @@ export default function CategoryChat({
   } | null>(null);
   // Edit mode for own messages
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
@@ -364,61 +373,86 @@ export default function CategoryChat({
   const handleBlockUserFromActionSheet = async () => {
     if (!user || !actionSheet) return;
     const targetId = actionSheet.senderId;
+    const actionSheetSnapshot = actionSheet;
     setActionSheet(null);
 
-    const { error: blockError } = await supabase.from('blocks').insert({
-      blocker_id: user.id,
-      blocked_id: targetId,
+    setConfirmDialog({
+      title: 'Block User',
+      message: 'Are you sure you want to block this user? You will no longer see their messages.',
+      confirmLabel: 'Block',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        const { error: blockError } = await supabase.from('blocks').insert({
+          blocker_id: user.id,
+          blocked_id: targetId,
+        });
+
+        if (blockError && blockError.code !== '23505') {
+          console.error('Failed to block user:', blockError);
+          return;
+        }
+
+        // Notify developer via a report entry
+        await supabase.from('reports').insert({
+          reporter_id: user.id,
+          reported_user_id: targetId,
+          message_id: actionSheetSnapshot.messageId,
+          message_content: actionSheetSnapshot.content,
+          reason: 'User blocked',
+          group_month: groupKey,
+          status: 'pending',
+        });
+
+        setBlockedIds((prev) => new Set([...prev, targetId]));
+        // Remove blocked user's messages immediately
+        setMessages((prev) => prev.filter((m) => m.sender_id !== targetId));
+      },
     });
-
-    if (blockError && blockError.code !== '23505') {
-      console.error('Failed to block user:', blockError);
-      return;
-    }
-
-    // Notify developer via a report entry
-    await supabase.from('reports').insert({
-      reporter_id: user.id,
-      reported_user_id: targetId,
-      message_id: actionSheet.messageId,
-      message_content: actionSheet.content,
-      reason: 'User blocked',
-      group_month: groupKey,
-      status: 'pending',
-    });
-
-    setBlockedIds((prev) => new Set([...prev, targetId]));
-    // Remove blocked user's messages immediately
-    setMessages((prev) => prev.filter((m) => m.sender_id !== targetId));
   };
 
   // Admin: delete a specific message
-  const handleAdminDeleteMessage = async (messageId: string) => {
+  const handleAdminDeleteMessage = (messageId: string) => {
     setActionSheet(null);
-    const { error } = await supabase.rpc('admin_delete_message', {
-      message_id_param: messageId,
+    setConfirmDialog({
+      title: 'Delete Message',
+      message: 'Are you sure you want to delete this message as admin? This cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        const { error } = await supabase.rpc('admin_delete_message', {
+          message_id_param: messageId,
+        });
+        if (error) {
+          console.error('Failed to delete message:', error);
+          return;
+        }
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      },
     });
-    if (error) {
-      console.error('Failed to delete message:', error);
-      return;
-    }
-    setMessages((prev) => prev.filter((m) => m.id !== messageId));
   };
 
   // Member: delete their own message (only within 24 hours)
-  const handleDeleteOwnMessage = async (messageId: string) => {
+  const handleDeleteOwnMessage = (messageId: string) => {
     if (!user) return;
     setActionSheet(null);
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .eq('id', messageId)
-      .eq('sender_id', user.id);
-    if (error) {
-      console.error('Failed to delete own message:', error);
-      return;
-    }
-    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    setConfirmDialog({
+      title: 'Delete Message',
+      message: 'Are you sure you want to delete this message? This cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        const { error } = await supabase
+          .from('messages')
+          .delete()
+          .eq('id', messageId)
+          .eq('sender_id', user.id);
+        if (error) {
+          console.error('Failed to delete own message:', error);
+          return;
+        }
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      },
+    });
   };
 
   // Member: update their own message content (only within 24 hours)
@@ -441,17 +475,25 @@ export default function CategoryChat({
   };
 
   // Admin: kick a user from this group
-  const handleKickMember = async (targetUserId: string) => {
+  const handleKickMember = (targetUserId: string) => {
     setAdminActionTarget(null);
-    const { error } = await supabase.rpc('kick_from_group', {
-      target_user_id: targetUserId,
-      group_key_param: groupKey,
+    setConfirmDialog({
+      title: 'Remove User',
+      message: 'Are you sure you want to remove this user from the group?',
+      confirmLabel: 'Remove',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        const { error } = await supabase.rpc('kick_from_group', {
+          target_user_id: targetUserId,
+          group_key_param: groupKey,
+        });
+        if (error) {
+          console.error('Failed to kick user:', error);
+          return;
+        }
+        setMembers((prev) => prev.filter((m) => m.id !== targetUserId));
+      },
     });
-    if (error) {
-      console.error('Failed to kick user:', error);
-      return;
-    }
-    setMembers((prev) => prev.filter((m) => m.id !== targetUserId));
   };
 
   // Admin: promote a user to admin role
@@ -759,6 +801,19 @@ export default function CategoryChat({
           messageContent={reportTarget.content}
           groupMonth={groupKey}
           onClose={() => setReportTarget(null)}
+        />
+      )}
+
+      {/* Confirmation Dialog for destructive actions */}
+      {confirmDialog && (
+        <ConfirmDialog
+          isOpen={true}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          confirmVariant="danger"
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
         />
       )}
     </div>
