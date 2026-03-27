@@ -37,7 +37,7 @@ export default function RootLayout({
         <AuthProvider>
           <SwipeBackProvider>
             <Navbar />
-            <main className="flex-1 min-h-0">{children}</main>
+            <main className="flex-1 min-h-0 animate-page-in">{children}</main>
           </SwipeBackProvider>
         </AuthProvider>
       </body>
