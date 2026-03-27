@@ -673,6 +673,7 @@ export default function CategoryChat({
             onSendMessage={handleSendMessage}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
+            userId={user?.id}
           />
         ) : (
           <div className="p-4 border-t text-center text-gray-400 text-sm">Checking membership...</div>
