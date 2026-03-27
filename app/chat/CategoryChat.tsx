@@ -14,6 +14,7 @@ import AdminActionSheet from '@/components/AdminActionSheet';
 import ReportModal from '@/components/ReportModal';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
+import { showLocalNotification } from '@/lib/notifications';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
@@ -183,6 +184,63 @@ export default function CategoryChat({
       });
     }
   }, []);
+
+  // Show local (in-app) notifications for new messages in OTHER joined groups
+  useEffect(() => {
+    if (!user) return;
+
+    let mounted = true;
+    let channels: ReturnType<typeof supabase.channel>[] = [];
+
+    const fetchAndSubscribeOtherGroups = async () => {
+      const { data: memberships } = await supabase
+        .from('group_members')
+        .select('group_key')
+        .eq('user_id', user.id);
+
+      if (!mounted || !memberships) return;
+
+      const otherGroupKeys = memberships
+        .map((m: { group_key: string }) => m.group_key)
+        .filter((k: string) => k !== groupKey);
+
+      if (otherGroupKeys.length === 0) return;
+
+      channels = otherGroupKeys.map((otherKey: string) => {
+        const groupLabel = otherKey.replace(/_/g, ' ');
+        return supabase
+          .channel(`local-notif:${user.id}:${otherKey}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+              filter: `group_month=eq.${otherKey}`,
+            },
+            (payload) => {
+              const newMsg = payload.new as Message;
+              if (newMsg.sender_id === user.id) return;
+              if (blockedIdsRef.current.has(newMsg.sender_id)) return;
+
+              showLocalNotification({
+                title: `New message in ${groupLabel}`,
+                body: `${newMsg.sender_name}: ${newMsg.content.slice(0, 80)}`,
+                data: { group_month: otherKey, message_id: newMsg.id },
+              }).catch(() => {/* best-effort */});
+            }
+          )
+          .subscribe();
+      });
+    };
+
+    fetchAndSubscribeOtherGroups();
+
+    return () => {
+      mounted = false;
+      channels.forEach((ch) => supabase.removeChannel(ch));
+    };
+  }, [user, groupKey]);
 
   useEffect(() => {
     if (!user) return;
