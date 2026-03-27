@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import CRSCalculator from '@/components/CRSCalculator';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 // ─── Latest Draws data ───────────────────────────────────────────────────────
 const LATEST_DRAWS = [
@@ -60,6 +61,7 @@ export default function WelcomePage() {
   const [vaultImages, setVaultImages] = useState<{ name: string; url: string }[]>([]);
   const [loadingVault, setLoadingVault] = useState(false);
   const [uploadingVault, setUploadingVault] = useState(false);
+  const [vaultError, setVaultError] = useState('');
   const vaultFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Delete account
@@ -176,24 +178,82 @@ export default function WelcomePage() {
     e.target.value = '';
 
     setUploadingVault(true);
-    const mimeExt = file.type.split('/')[1]?.toLowerCase().replace('jpeg', 'jpg') ?? '';
-    const allowedExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']);
-    const nameExt = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const ext = allowedExts.has(mimeExt) ? mimeExt : allowedExts.has(nameExt) ? nameExt : 'jpg';
-    const path = `${user.id}/${Date.now()}.${ext}`;
+    setVaultError('');
+    try {
+      const mimeExt = file.type.split('/')[1]?.toLowerCase().replace('jpeg', 'jpg') ?? '';
+      const allowedExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']);
+      const nameExt = file.name.split('.').pop()?.toLowerCase() ?? '';
+      const ext = allowedExts.has(mimeExt) ? mimeExt : allowedExts.has(nameExt) ? nameExt : 'jpg';
+      const path = `${user.id}/${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('vault-images')
-      .upload(path, file, { upsert: false });
+      const { error: uploadError } = await supabase.storage
+        .from('vault-images')
+        .upload(path, file, { upsert: false });
 
-    setUploadingVault(false);
+      if (uploadError) {
+        setVaultError('Upload failed. Please try again.');
+        return;
+      }
 
-    if (uploadError) {
-      console.error('Failed to upload vault image:', uploadError);
-      return;
+      await loadVaultImages();
+    } catch {
+      setVaultError('Upload failed. Please try again.');
+    } finally {
+      setUploadingVault(false);
     }
+  };
 
-    await loadVaultImages();
+  const handleVaultCameraCapture = async () => {
+    if (!user) return;
+    setVaultError('');
+    setUploadingVault(true);
+    try {
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+        quality: 85,
+      });
+
+      if (!photo.base64String) {
+        setVaultError('Failed to capture photo. Please try again.');
+        return;
+      }
+
+      const rawExt = photo.format?.toLowerCase().replace('jpeg', 'jpg') ?? 'jpg';
+      const ext = rawExt || 'jpg';
+      const timestamp = Date.now();
+      const byteCharacters = atob(photo.base64String);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: `image/${ext}` });
+      const file = new File([blob], `photo_${timestamp}.${ext}`, { type: `image/${ext}` });
+
+      const path = `${user.id}/${timestamp}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('vault-images')
+        .upload(path, file, { upsert: false });
+
+      if (uploadError) {
+        setVaultError('Upload failed. Please try again.');
+        return;
+      }
+
+      await loadVaultImages();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('cancelled') || message.includes('canceled') || message.includes('No image picked')) {
+        // User cancelled — no error shown
+      } else if (message.includes('denied') || message.includes('permission') || message.includes('access')) {
+        setVaultError('Camera access denied. Please enable camera permission in Settings.');
+      } else {
+        setVaultError('Could not take photo. Please try again.');
+      }
+    } finally {
+      setUploadingVault(false);
+    }
   };
 
   const handleVaultDelete = async (imageName: string) => {
@@ -512,19 +572,31 @@ export default function WelcomePage() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                 Store private photos here. Only you can see them.
               </p>
-              <button
-                onClick={() => vaultFileInputRef.current?.click()}
-                disabled={uploadingVault}
-                className="mb-4 inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
-              >
-                {uploadingVault ? 'Uploading…' : '+ Add Photo'}
-              </button>
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => { setVaultError(''); vaultFileInputRef.current?.click(); }}
+                  disabled={uploadingVault}
+                  className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  {uploadingVault ? 'Uploading…' : '🖼 Choose Photo'}
+                </button>
+                <button
+                  onClick={handleVaultCameraCapture}
+                  disabled={uploadingVault}
+                  className="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  📷 Take Photo
+                </button>
+              </div>
+              {vaultError ? (
+                <p className="text-xs text-red-600 dark:text-red-400 mb-3">{vaultError}</p>
+              ) : null}
 
               {loadingVault ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
               ) : vaultImages.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No photos yet. Tap &quot;+ Add Photo&quot; to add one.
+                  No photos yet. Tap &quot;🖼 Choose Photo&quot; or &quot;📷 Take Photo&quot; to add one.
                 </p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
