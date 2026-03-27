@@ -1,33 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
-
-interface VaultImage {
-  name: string;
-  url: string;
-}
 
 interface ChatInputProps {
   onSendMessage: (content: string) => Promise<void>;
   disabled?: boolean;
   editingMessage?: { id: string; content: string } | null;
   onCancelEdit?: () => void;
-  userId?: string;
 }
 
 const KEYBOARD_SCROLL_DELAY_MS = 300; // Allow time for the software keyboard animation to complete
-const VAULT_SIGNED_URL_EXPIRY = 3600; // Signed URL expiry in seconds (1 hour)
 
-export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, userId }: ChatInputProps) {
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [showVaultPicker, setShowVaultPicker] = useState(false);
-  const [vaultImages, setVaultImages] = useState<VaultImage[]>([]);
-  const [loadingVault, setLoadingVault] = useState(false);
-  const [sharingVaultImage, setSharingVaultImage] = useState<string | null>(null);
-  const [vaultShareError, setVaultShareError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -61,65 +47,6 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     }
   };
 
-  const loadVaultImages = async () => {
-    if (!userId) return;
-    setLoadingVault(true);
-    const { data, error } = await supabase.storage
-      .from('vault-images')
-      .list(`${userId}/`, { limit: 100 });
-    if (!error && data) {
-      const filtered = data.filter((f) => f.name !== '.emptyFolderPlaceholder');
-      const imagePromises = filtered.map(async (f) => {
-        const { data: urlData } = await supabase.storage
-          .from('vault-images')
-          .createSignedUrl(`${userId}/${f.name}`, VAULT_SIGNED_URL_EXPIRY);
-        return { name: f.name, url: urlData?.signedUrl ?? '' };
-      });
-      setVaultImages(await Promise.all(imagePromises));
-    } else {
-      setVaultImages([]);
-    }
-    setLoadingVault(false);
-  };
-
-  const handleOpenVaultPicker = async () => {
-    if (!userId) return;
-    setVaultShareError('');
-    setShowVaultPicker(true);
-    await loadVaultImages();
-  };
-
-  const handleShareVaultImage = async (img: VaultImage) => {
-    if (!userId || !img.url) return;
-    setSharingVaultImage(img.name);
-    setVaultShareError('');
-    try {
-      // Fetch the private vault image via the signed URL
-      const response = await fetch(img.url);
-      if (!response.ok) throw new Error('Failed to fetch vault image');
-      const blob = await response.blob();
-      const ext = img.name.split('.').pop() ?? 'jpg';
-      const fileName = `${userId}/${Date.now()}.${ext}`;
-
-      // Upload to the public chat-images bucket so all chat members can see it
-      const { error: uploadError } = await supabase.storage
-        .from('chat-images')
-        .upload(fileName, blob);
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = supabase.storage
-        .from('chat-images')
-        .getPublicUrl(fileName);
-
-      await onSendMessage(publicUrlData.publicUrl);
-      setShowVaultPicker(false);
-    } catch {
-      setVaultShareError('Failed to share image. Please try again.');
-    } finally {
-      setSharingVaultImage(null);
-    }
-  };
-
   const isEditing = !!editingMessage;
 
   return (
@@ -139,76 +66,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
           </button>
         </div>
       )}
-
-      {/* Vault image picker sheet */}
-      {showVaultPicker && (
-        <div className="border-t bg-white dark:bg-gray-900 px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">🔒 Share from Vault</span>
-            <button
-              type="button"
-              onClick={() => setShowVaultPicker(false)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none"
-            >
-              ✕
-            </button>
-          </div>
-          {loadingVault ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Loading vault…</p>
-          ) : vaultImages.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">No images in your vault yet.</p>
-          ) : (
-            <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
-              {vaultImages.map((img) => (
-                <button
-                  key={img.name}
-                  type="button"
-                  onClick={() => handleShareVaultImage(img)}
-                  disabled={!!sharingVaultImage}
-                  className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-red-400 transition-colors disabled:opacity-50"
-                >
-                  {img.url ? (
-                    <Image
-                      src={img.url}
-                      alt={img.name}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-xs">
-                      ?
-                    </div>
-                  )}
-                  {sharingVaultImage === img.name && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <span className="text-white text-xs">Sharing…</span>
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-          {vaultShareError && (
-            <p className="text-xs text-red-500 dark:text-red-400 mt-2">{vaultShareError}</p>
-          )}
-        </div>
-      )}
-
-      <form ref={formRef} onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white dark:bg-gray-900 border-t dark:border-gray-800">
-        {/* Vault button — only shown when not editing */}
-        {!isEditing && userId && (
-          <button
-            type="button"
-            onClick={handleOpenVaultPicker}
-            disabled={disabled || sending}
-            className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0 disabled:opacity-50"
-            aria-label="Share from vault"
-            title="Share from vault"
-          >
-            🔒
-          </button>
-        )}
+      <form ref={formRef} onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white border-t">
         <input
           ref={inputRef}
           type="text"
@@ -218,7 +76,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
           placeholder={isEditing ? 'Edit your message…' : 'Type a message...'}
           disabled={disabled || sending}
           autoComplete="off"
-          className="flex-1 border border-gray-300 dark:border-gray-700 rounded-full px-4 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
+          className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
         />
         <button
           type="submit"
