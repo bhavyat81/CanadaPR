@@ -48,6 +48,7 @@ export default function WelcomePage() {
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState('');
+  const [dataLoading, setDataLoading] = useState(true);
   const [openSection, setOpenSection] = useState<SectionId>(null);
 
   // Blocked users
@@ -76,17 +77,21 @@ export default function WelcomePage() {
     if (!user) return;
 
     const loadProfile = async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', user.id)
-        .single();
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single();
 
-      if (!profile) {
-        router.push('/profile');
-        return;
+        if (!profile) {
+          router.push('/profile');
+          return;
+        }
+        setDisplayName(profile.display_name);
+      } finally {
+        setDataLoading(false);
       }
-      setDisplayName(profile.display_name);
     };
 
     loadProfile();
@@ -259,7 +264,7 @@ export default function WelcomePage() {
     setOpenSection((prev) => (prev === id ? null : id));
   };
 
-  if (authLoading || !displayName) {
+  if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-gray-500 dark:text-gray-400">Loading...</div>

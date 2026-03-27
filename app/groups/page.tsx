@@ -31,31 +31,33 @@ export default function GroupsPage() {
     const loadData = async () => {
       setLoadingData(true);
 
-      // Load user profile to get their category
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('pr_category')
-        .eq('id', user.id)
-        .single();
+      try {
+        // Load user profile to get their category
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('pr_category')
+          .eq('id', user.id)
+          .single();
 
-      setUserCategory(profile?.pr_category ?? null);
+        setUserCategory(profile?.pr_category ?? null);
 
-      // Load member counts per category
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('pr_category');
+        // Load member counts per category
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('pr_category');
 
-      if (profiles) {
-        const counts: CategoryCounts = {};
-        profiles.forEach(({ pr_category }) => {
-          if (pr_category) {
-            counts[pr_category] = (counts[pr_category] || 0) + 1;
-          }
-        });
-        setCategoryCounts(counts);
+        if (profiles) {
+          const counts: CategoryCounts = {};
+          profiles.forEach(({ pr_category }) => {
+            if (pr_category) {
+              counts[pr_category] = (counts[pr_category] || 0) + 1;
+            }
+          });
+          setCategoryCounts(counts);
+        }
+      } finally {
+        setLoadingData(false);
       }
-
-      setLoadingData(false);
     };
 
     loadData();
