@@ -47,5 +47,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>CanadaPR needs camera access to take photos for your private vault.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CanadaPR needs access to your photo library to upload images to your private vault.</string>
 </dict>
 </plist>
