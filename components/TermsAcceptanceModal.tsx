@@ -35,25 +35,25 @@ export default function TermsAcceptanceModal({ userId, onAccepted }: TermsAccept
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b">
+        <div className="px-6 pt-6 pb-4 border-b dark:border-gray-700">
           <div className="text-3xl mb-2 text-center">🇨🇦</div>
-          <h2 className="text-xl font-bold text-gray-800 text-center">Community Guidelines</h2>
-          <p className="text-sm text-gray-500 text-center mt-1">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white text-center">Community Guidelines</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
             Please read and accept before joining the chat
           </p>
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 text-sm text-gray-700 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 text-sm text-gray-700 dark:text-gray-300 space-y-4">
           <p>
             Canada PR Chat is a <strong>peer-to-peer community</strong> for PR applicants. It is{' '}
             <strong>not</strong> an official government resource or legal advice service.
           </p>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-1">Community Rules</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-white mb-1">Community Rules</h3>
             <ul className="list-disc ml-5 space-y-1">
               <li>Be respectful and courteous to all members.</li>
               <li>No hate speech, discrimination, or harassment.</li>
@@ -67,7 +67,7 @@ export default function TermsAcceptanceModal({ userId, onAccepted }: TermsAccept
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-1">Reporting &amp; Blocking</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-white mb-1">Reporting &amp; Blocking</h3>
             <p>
               You can <strong>report</strong> any message that violates these guidelines by
               long-pressing it. You can also <strong>block</strong> any user to instantly hide
@@ -77,7 +77,7 @@ export default function TermsAcceptanceModal({ userId, onAccepted }: TermsAccept
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-1">Enforcement</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-white mb-1">Enforcement</h3>
             <p>
               Violations may result in your messages being removed and your account being
               suspended or permanently banned.
@@ -94,7 +94,7 @@ export default function TermsAcceptanceModal({ userId, onAccepted }: TermsAccept
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t space-y-3">
+        <div className="px-6 py-4 border-t dark:border-gray-700 space-y-3">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -102,7 +102,7 @@ export default function TermsAcceptanceModal({ userId, onAccepted }: TermsAccept
               onChange={(e) => setAgreed(e.target.checked)}
               className="mt-0.5 h-4 w-4 accent-red-600 flex-shrink-0"
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
               I agree to the Terms of Use and Community Guidelines
             </span>
           </label>

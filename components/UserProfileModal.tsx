@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { formatMonth } from '@/lib/months';
 import { getCategoryLabel } from '@/lib/categories';
 import StatusTimeline, { JourneyStep } from './StatusTimeline';
+import { getAvatarUrl } from '@/lib/avatars';
 
 const BLOCK_SUCCESS_DISPLAY_DURATION = 1500;
 
@@ -120,6 +122,7 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
   if (!isOpen) return null;
 
   const categoryLabel = profile?.pr_category ? getCategoryLabel(profile.pr_category) : null;
+  const avatarUrl = getAvatarUrl(userId);
 
   return (
     <div
@@ -127,27 +130,37 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-4">
-          <div className="min-w-0 flex-1">
-            {loading ? (
-              <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
-            ) : (
-              <>
-                <h2 className="text-lg font-bold text-gray-800 truncate">
-                  @{profile?.display_name ?? 'Unknown User'}&apos;s PR Journey
-                </h2>
-                {categoryLabel && (
-                  <p className="text-sm text-gray-500 mt-0.5">{categoryLabel}</p>
-                )}
-              </>
-            )}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Image
+              src={avatarUrl}
+              alt={profile?.display_name ?? 'User'}
+              width={48}
+              height={48}
+              className="rounded-full flex-shrink-0"
+              unoptimized
+            />
+            <div className="min-w-0 flex-1">
+              {loading ? (
+                <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              ) : (
+                <>
+                  <h2 className="text-lg font-bold text-gray-800 dark:text-white truncate">
+                    @{profile?.display_name ?? 'Unknown User'}&apos;s PR Journey
+                  </h2>
+                  {categoryLabel && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{categoryLabel}</p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none ml-4"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none ml-4"
             aria-label="Close"
           >
             ✕
@@ -158,8 +171,8 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
           <div className="flex flex-col gap-3 mt-2">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="h-5 w-5 rounded-full bg-gray-200 animate-pulse" />
-                <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
+                <div className="h-5 w-5 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                <div className="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
               </div>
             ))}
           </div>
@@ -168,8 +181,8 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
         ) : (
           <>
             {profile?.pr_month && (
-              <p className="text-sm text-gray-600 mb-3">
-                <span className="font-medium text-gray-700">Application Month:</span>{' '}
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                <span className="font-medium text-gray-700 dark:text-gray-200">Application Month:</span>{' '}
                 {formatMonth(profile.pr_month)}
               </p>
             )}
@@ -179,9 +192,9 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
             />
 
             {currentUserId && currentUserId !== userId && (
-              <div className="mt-5 pt-4 border-t">
+              <div className="mt-5 pt-4 border-t dark:border-gray-700">
                 {blocked ? (
-                  <p className="text-sm text-center text-gray-500">
+                  <p className="text-sm text-center text-gray-500 dark:text-gray-400">
                     ✅ User blocked. Their messages will no longer be visible to you.
                   </p>
                 ) : (
@@ -189,7 +202,7 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
                     <button
                       onClick={handleBlockUser}
                       disabled={blocking}
-                      className="w-full py-2.5 text-sm font-semibold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-40"
+                      className="w-full py-2.5 text-sm font-semibold text-red-600 border border-red-200 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
                     >
                       {blocking ? 'Blocking...' : '🚫 Block User'}
                     </button>

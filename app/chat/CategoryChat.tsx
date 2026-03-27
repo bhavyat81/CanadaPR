@@ -514,8 +514,8 @@ export default function CategoryChat({
 
   if (authLoading || termsAccepted === null) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -536,13 +536,13 @@ export default function CategoryChat({
   return (
     <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
       {/* Chat Header */}
-      <div className="bg-white border-b px-4 py-3 sm:py-4 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white truncate">
               🇨🇦 {displayMonth} Chat
             </h1>
-            <p className="text-xs sm:text-sm text-gray-500 truncate">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
               {categoryShort} · {decodedMonth} applicants
             </p>
           </div>
@@ -568,15 +568,15 @@ export default function CategoryChat({
       {/* Leave Group Confirmation Modal */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Leave this group?</h2>
-            <p className="text-gray-600 text-sm mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Leave this group?</h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
               Are you sure you want to leave this group? You can always rejoin later.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowLeaveConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
@@ -592,15 +592,15 @@ export default function CategoryChat({
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 px-3 sm:px-4 py-4">
+      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 py-4">
         <div className="max-w-4xl mx-auto">
           {loadingMessages ? (
-            <div className="text-center text-gray-500 py-8">Loading messages...</div>
+            <div className="text-center text-gray-500 dark:text-gray-400 py-8">Loading messages...</div>
           ) : visibleMessages.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">💬</div>
-              <h3 className="text-lg font-semibold text-gray-700">No messages yet</h3>
-              <p className="text-gray-500 mt-2">
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No messages yet</h3>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">
                 Be the first to say hello to the {displayMonth} {categoryShort} group!
               </p>
             </div>
@@ -639,7 +639,7 @@ export default function CategoryChat({
       {/* Chat Input */}
       <div className="max-w-4xl mx-auto w-full">
         {sendError && (
-          <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-700 text-sm flex items-center justify-between">
+          <div className="px-4 py-2 bg-red-50 dark:bg-red-900/30 border-t border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm flex items-center justify-between">
             <span>{sendError}</span>
             <button
               onClick={() => setSendError(null)}
@@ -650,7 +650,7 @@ export default function CategoryChat({
           </div>
         )}
         {!userProfile ? (
-          <div className="p-4 bg-yellow-50 border-t text-center text-yellow-800">
+          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-t dark:border-gray-700 text-center text-yellow-800 dark:text-yellow-400">
             Please{' '}
             <a href="/profile" className="font-medium underline">
               set up your profile
@@ -658,7 +658,7 @@ export default function CategoryChat({
             to send messages.
           </div>
         ) : isMember === false ? (
-          <div className="p-4 bg-blue-50 border-t text-center text-blue-800">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-t dark:border-gray-700 text-center text-blue-800 dark:text-blue-400">
             <p className="mb-2">Join this group to start chatting.</p>
             <button
               onClick={handleJoinGroup}
@@ -675,7 +675,7 @@ export default function CategoryChat({
             onCancelEdit={() => setEditingMessage(null)}
           />
         ) : (
-          <div className="p-4 border-t text-center text-gray-400 text-sm">Checking membership...</div>
+          <div className="p-4 border-t dark:border-gray-700 text-center text-gray-400 dark:text-gray-500 text-sm">Checking membership...</div>
         )}
       </div>
 

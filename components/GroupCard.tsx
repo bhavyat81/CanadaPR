@@ -17,14 +17,14 @@ export default function GroupCard({ month, displayName, memberCount, isUserGroup
     <div
       className={`p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border-2 ${
         isUserGroup
-          ? 'border-red-500 bg-red-50'
-          : 'border-transparent bg-white hover:border-red-200'
+          ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+          : 'border-transparent bg-white dark:bg-gray-800 hover:border-red-200 dark:hover:border-red-700'
       }`}
     >
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">{displayName} Applicants</h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{displayName} Applicants</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {memberCount} {memberCount === 1 ? 'member' : 'members'}
           </p>
         </div>
@@ -37,7 +37,7 @@ export default function GroupCard({ month, displayName, memberCount, isUserGroup
       <div className="mt-4">
         {isJoined ? (
           <Link href={href}>
-            <span className="inline-flex items-center text-sm text-green-600 font-medium hover:text-green-700 cursor-pointer">
+            <span className="inline-flex items-center text-sm text-green-600 dark:text-green-400 font-medium hover:text-green-700 dark:hover:text-green-300 cursor-pointer">
               Open Chat → <span className="ml-1">✓</span>
             </span>
           </Link>

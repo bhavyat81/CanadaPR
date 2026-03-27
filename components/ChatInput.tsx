@@ -52,7 +52,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
   return (
     <div>
       {isEditing && (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 border-t border-red-100 text-xs text-red-700">
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/30 border-t border-red-100 dark:border-red-800 text-xs text-red-700 dark:text-red-400">
           <span className="flex-1">✏️ Editing message</span>
           <button
             type="button"
@@ -60,13 +60,13 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
               setMessage('');
               onCancelEdit?.();
             }}
-            className="font-semibold hover:text-red-900"
+            className="font-semibold hover:text-red-900 dark:hover:text-red-300"
           >
             Cancel
           </button>
         </div>
       )}
-      <form ref={formRef} onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white border-t">
+      <form ref={formRef} onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
         <input
           ref={inputRef}
           type="text"
@@ -76,7 +76,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
           placeholder={isEditing ? 'Edit your message…' : 'Type a message...'}
           disabled={disabled || sending}
           autoComplete="off"
-          className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
+          className="flex-1 border border-gray-300 dark:border-gray-600 rounded-full px-4 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50"
         />
         <button
           type="submit"

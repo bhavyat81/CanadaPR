@@ -18,8 +18,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500 text-lg">Loading…</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-500 dark:text-gray-400 text-lg">Loading…</div>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-red-600 to-red-800 text-white py-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
@@ -62,28 +62,28 @@ export default function Home() {
       {/* Features Section */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
+          <h2 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-12">
             Why Canada PR Chat?
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-xl shadow-md text-center">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md text-center">
               <div className="text-4xl mb-4">💬</div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-3">Monthly Chat Groups</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">Monthly Chat Groups</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Join your application month&apos;s chat group and connect with applicants at the same stage as you.
               </p>
             </div>
-            <div className="bg-white p-8 rounded-xl shadow-md text-center">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md text-center">
               <div className="text-4xl mb-4">⚡</div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-3">Real-time Messaging</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">Real-time Messaging</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Get instant updates and share your journey with real-time chat powered by Supabase.
               </p>
             </div>
-            <div className="bg-white p-8 rounded-xl shadow-md text-center">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md text-center">
               <div className="text-4xl mb-4">🤝</div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-3">Community Support</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">Community Support</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Share tips, updates, and support each other through the Canadian PR application process.
               </p>
             </div>
@@ -92,9 +92,9 @@ export default function Home() {
       </section>
 
       {/* How It Works Section */}
-      <section className="bg-white py-20 px-4">
+      <section className="bg-white dark:bg-gray-800 py-20 px-4">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">How It Works</h2>
+          <h2 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-12">How It Works</h2>
           <div className="space-y-8">
             {[
               { step: '1', title: 'Create Your Account', description: 'Sign up with your email and password' },
@@ -107,8 +107,8 @@ export default function Home() {
                   {step}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-                  <p className="text-gray-600">{description}</p>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{title}</h3>
+                  <p className="text-gray-600 dark:text-gray-300">{description}</p>
                 </div>
               </div>
             ))}
@@ -129,7 +129,7 @@ export default function Home() {
       </section>
 
       {/* Legal Disclaimer Footer */}
-      <footer className="bg-gray-50 border-t border-gray-200 py-6 px-4 text-center">
+      <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-6 px-4 text-center">
         <p className="text-xs text-gray-400 max-w-2xl mx-auto">
           CanadaPR Chat is a community platform and is not affiliated with IRCC or any government body. This is not immigration advice.
         </p>
