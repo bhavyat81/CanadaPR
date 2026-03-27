@@ -15,6 +15,7 @@ import ReportModal from '@/components/ReportModal';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 import { showLocalNotification } from '@/lib/notifications';
+import { Capacitor } from '@capacitor/core';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
@@ -102,6 +103,9 @@ export default function CategoryChat({
   const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
 
+  // Capacitor keyboard height — used to shift layout above the software keyboard on iOS
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
 
@@ -114,6 +118,35 @@ export default function CategoryChat({
   useEffect(() => {
     blockedIdsRef.current = blockedIds;
   }, [blockedIds]);
+
+  // Capacitor keyboard event handling — keep chat input above the software keyboard on iOS
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let showHandle: { remove: () => Promise<void> } | null = null;
+    let hideHandle: { remove: () => Promise<void> } | null = null;
+
+    import('@capacitor/keyboard').then(({ Keyboard }) => {
+      Keyboard.addListener('keyboardWillShow', (info) => {
+        setKeyboardHeight(info.keyboardHeight);
+        // Scroll to bottom so latest messages stay visible above the keyboard
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
+      }).then((h) => { showHandle = h; });
+
+      Keyboard.addListener('keyboardWillHide', () => {
+        setKeyboardHeight(0);
+      }).then((h) => { hideHandle = h; });
+    }).catch(() => {
+      // Keyboard plugin not available — no-op
+    });
+
+    return () => {
+      showHandle?.remove().catch(() => {});
+      hideHandle?.remove().catch(() => {});
+    };
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -698,7 +731,7 @@ export default function CategoryChat({
   const pinnedMessageIds = new Set(pinnedMessages.map((p) => p.message_id));
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
+    <div className="flex flex-col" style={{ height: `calc(100dvh - 64px - ${keyboardHeight}px)` }}>
       {/* Chat Header */}
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
@@ -899,6 +932,7 @@ export default function CategoryChat({
             onSendMessage={handleSendMessage}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
+            keyboardHeight={keyboardHeight}
           />
         ) : (
           <div className="p-4 border-t dark:border-gray-700 text-center text-gray-400 dark:text-gray-500 text-sm">Checking membership...</div>

@@ -5,36 +5,38 @@ import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 
 interface Draw {
-  drawNumber: number;
-  date: string;
-  program: string;
-  crsScore: number;
+  drawNumber: string;
+  drawDate: string;
+  programType: string;
   invitations: number;
-  category: string;
+  crsScore: number;
 }
 
-const CATEGORY_STYLES: Record<string, { badge: string; label: string }> = {
-  CEC: {
-    badge: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-    label: 'Canadian Experience Class',
-  },
-  PNP: {
-    badge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
-    label: 'Provincial Nominee Program',
-  },
-  FSW: {
-    badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
-    label: 'Federal Skilled Worker',
-  },
-  General: {
-    badge: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-    label: 'No program specified',
-  },
-};
+/** All filter options shown in the "Filter By Type" dropdown. */
+const FILTER_OPTIONS = [
+  'All',
+  'Canadian Experience Class',
+  'Provincial Nominee Program',
+  'French-Language proficiency',
+  'No program specified',
+  'STEM occupations',
+  'Healthcare occupations',
+  'Trade occupations',
+  'Transport occupations',
+  'Agriculture and agri-food occupations',
+  'Education occupations',
+  'General',
+];
 
+/**
+ * Format a YYYY-MM-DD date string as DD-MMM-YY (e.g. "18-Mar-26").
+ */
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00Z');
-  return d.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const month = d.toLocaleDateString('en-CA', { month: 'short', timeZone: 'UTC' });
+  const year = String(d.getUTCFullYear()).slice(-2);
+  return `${day}-${month}-${year}`;
 }
 
 export default function DrawsPage() {
@@ -42,6 +44,8 @@ export default function DrawsPage() {
   const router = useRouter();
   const [draws, setDraws] = useState<Draw[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState('All');
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -53,7 +57,8 @@ export default function DrawsPage() {
     fetch('/draws.json')
       .then((res) => res.json())
       .then((data: Draw[]) => {
-        const sorted = [...data].sort((a, b) => b.drawNumber - a.drawNumber);
+        // Sort by drawNumber descending (newest first)
+        const sorted = [...data].sort((a, b) => Number(b.drawNumber) - Number(a.drawNumber));
         setDraws(sorted);
         setLoading(false);
       })
@@ -70,133 +75,148 @@ export default function DrawsPage() {
 
   const latest = draws[0];
 
+  /** Filter draws by the selected type (partial match on programType). */
+  const filteredDraws =
+    selectedFilter === 'All'
+      ? draws
+      : draws.filter((d) => d.programType.toLowerCase().includes(selectedFilter.toLowerCase()));
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-8">
+      {/* ── Header / Summary ─────────────────────────────────────────────── */}
+      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-4">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Express Entry Draws</h1>
 
-        {/* Page header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Express Entry Draws</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Latest IRCC Express Entry invitation rounds
-          </p>
-        </div>
-
-        {/* Summary stats */}
         {latest && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Latest CRS</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{latest.crsScore}</p>
+          <div className="grid grid-cols-3 gap-3">
+            {/* Calculate Your Score */}
+            <a
+              href="https://www.cic.gc.ca/english/immigrate/skilled/crs-tool.asp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center active:opacity-70"
+            >
+              <svg className="w-7 h-7 text-red-600 dark:text-red-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              <span className="text-xs font-semibold text-red-700 dark:text-red-400 leading-tight">Calculate Your Score</span>
+            </a>
+
+            {/* Latest draw date + invitations */}
+            <div className="flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Latest Draw</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{formatDate(latest.drawDate)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{latest.invitations.toLocaleString()} invited</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Invitations</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{latest.invitations.toLocaleString()}</p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Latest Draw</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">#{latest.drawNumber}</p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Draw Date</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mt-1">{formatDate(latest.date)}</p>
+
+            {/* Min CRS Score (large) */}
+            <div className="flex flex-col items-center justify-center bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium">Min ITA Score</p>
+              <p className="text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">{latest.crsScore}</p>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Desktop table */}
-        {draws.length === 0 ? (
+      {/* ── Filter By Type ───────────────────────────────────────────────── */}
+      <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+        <div className="relative">
+          <button
+            onClick={() => setFilterOpen((prev) => !prev)}
+            className="flex items-center gap-2 text-sm font-semibold text-red-600 dark:text-red-400"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            Filter By Type
+            {selectedFilter !== 'All' && (
+              <span className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs px-2 py-0.5 rounded-full font-medium">
+                {selectedFilter}
+              </span>
+            )}
+            <svg
+              className={`w-4 h-4 transition-transform ${filterOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {filterOpen && (
+            <div className="absolute left-0 mt-2 z-20 bg-white dark:bg-gray-800 rounded-xl shadow-xl border dark:border-gray-700 overflow-hidden w-72">
+              {FILTER_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => {
+                    setSelectedFilter(opt);
+                    setFilterOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+                    selectedFilter === opt
+                      ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 font-semibold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Draws Table ──────────────────────────────────────────────────── */}
+      <div className="px-4 pt-3">
+        {filteredDraws.length === 0 ? (
           <div className="text-center py-16 text-gray-500 dark:text-gray-400">
             <div className="text-5xl mb-4">📊</div>
-            <p>No draws data available.</p>
+            <p>No draws match the selected filter.</p>
           </div>
         ) : (
-          <>
-            {/* Desktop table view */}
-            <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Draw #</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Program</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">CRS Score</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Invitations</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {draws.map((draw, idx) => {
-                    const style = CATEGORY_STYLES[draw.category] ?? CATEGORY_STYLES.General;
-                    return (
-                      <tr
-                        key={draw.drawNumber}
-                        className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                      >
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900 dark:text-white">#{draw.drawNumber}</span>
-                            {idx === 0 && (
-                              <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">
-                                Latest
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300">{formatDate(draw.date)}</td>
-                        <td className="px-5 py-4">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
-                            {draw.category === 'General' ? 'No program' : draw.category}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right font-bold text-gray-900 dark:text-white">{draw.crsScore}</td>
-                        <td className="px-5 py-4 text-right text-sm text-gray-700 dark:text-gray-300">{draw.invitations.toLocaleString()}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
+            {/* Table header */}
+            <div className="grid grid-cols-[90px_1fr_80px] gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Type</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Min ITA</span>
             </div>
 
-            {/* Mobile card view */}
-            <div className="sm:hidden space-y-3">
-              {draws.map((draw, idx) => {
-                const style = CATEGORY_STYLES[draw.category] ?? CATEGORY_STYLES.General;
-                return (
-                  <div key={draw.drawNumber} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-900 dark:text-white">Draw #{draw.drawNumber}</span>
-                        {idx === 0 && (
-                          <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">
-                            Latest
-                          </span>
-                        )}
-                      </div>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
-                        {draw.category === 'General' ? 'No program' : draw.category}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">{formatDate(draw.date)}</div>
-                    <div className="flex gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">CRS Score</p>
-                        <p className="text-lg font-bold text-red-600">{draw.crsScore}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Invitations</p>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">{draw.invitations.toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
+            {/* Table rows */}
+            {filteredDraws.map((draw, idx) => (
+              <div
+                key={draw.drawNumber}
+                className={`grid grid-cols-[90px_1fr_80px] gap-2 px-4 py-3 items-start border-b dark:border-gray-700 last:border-0 ${
+                  idx === 0 ? 'bg-red-50 dark:bg-red-900/10' : ''
+                }`}
+              >
+                {/* Date */}
+                <div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{formatDate(draw.drawDate)}</span>
+                  {idx === 0 && (
+                    <span className="block text-xs text-red-600 dark:text-red-400 font-semibold mt-0.5">Latest</span>
+                  )}
+                </div>
+
+                {/* Full type name + invited count */}
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">{draw.programType}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{draw.invitations.toLocaleString()} invited</p>
+                </div>
+
+                {/* Min ITA Score — bold */}
+                <div className="text-right">
+                  <span className="text-base font-bold text-gray-900 dark:text-white">{draw.crsScore}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
-        {/* Last updated note */}
-        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
-          Data sourced from IRCC Express Entry draws · Last updated {draws.length > 0 ? formatDate(draws[0].date) : '—'}
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
+          Data sourced from IRCC Express Entry draws
+          {draws.length > 0 ? ` · Last updated ${formatDate(draws[0].drawDate)}` : ''}
         </p>
       </div>
     </div>

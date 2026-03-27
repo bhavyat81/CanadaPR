@@ -7,15 +7,14 @@ interface ChatInputProps {
   disabled?: boolean;
   editingMessage?: { id: string; content: string } | null;
   onCancelEdit?: () => void;
+  /** Extra bottom padding (in px) injected by parent when the Capacitor keyboard is open. */
+  keyboardHeight?: number;
 }
 
-const KEYBOARD_SCROLL_DELAY_MS = 300; // Allow time for the software keyboard animation to complete
-
-export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit }: ChatInputProps) {
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, keyboardHeight = 0 }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   // When entering edit mode, prefill the input and focus it
   useEffect(() => {
@@ -26,13 +25,6 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
       setMessage('');
     }
   }, [editingMessage]);
-
-  const handleFocus = () => {
-    // Scroll the form into view so the keyboard doesn't hide it (WhatsApp-like behavior)
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
-    }, KEYBOARD_SCROLL_DELAY_MS);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,8 +41,15 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
 
   const isEditing = !!editingMessage;
 
+  // When keyboard is open, shift the input above the keyboard using inline style.
+  // CSS env(safe-area-inset-bottom) handles iPhone notch/home-indicator spacing.
+  const bottomOffset = keyboardHeight > 0 ? keyboardHeight : undefined;
+
   return (
-    <div>
+    <div
+      style={bottomOffset !== undefined ? { paddingBottom: bottomOffset } : undefined}
+      className="bg-white dark:bg-gray-800"
+    >
       {isEditing && (
         <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/30 border-t border-red-100 dark:border-red-800 text-xs text-red-700 dark:text-red-400">
           <span className="flex-1">✏️ Editing message</span>
@@ -66,13 +65,16 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
           </button>
         </div>
       )}
-      <form ref={formRef} onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-center space-x-2 p-4 border-t dark:border-gray-700"
+        style={{ paddingBottom: `max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))` }}
+      >
         <input
           ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onFocus={handleFocus}
           placeholder={isEditing ? 'Edit your message…' : 'Type a message...'}
           disabled={disabled || sending}
           autoComplete="off"
