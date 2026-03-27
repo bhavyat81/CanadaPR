@@ -7,15 +7,13 @@ interface ChatInputProps {
   disabled?: boolean;
   editingMessage?: { id: string; content: string } | null;
   onCancelEdit?: () => void;
+  onKeyboardShow?: () => void;
 }
 
-const KEYBOARD_SCROLL_DELAY_MS = 300; // Allow time for the software keyboard animation to complete
-
-export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit }: ChatInputProps) {
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, onKeyboardShow }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   // When entering edit mode, prefill the input and focus it
   useEffect(() => {
@@ -28,10 +26,8 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
   }, [editingMessage]);
 
   const handleFocus = () => {
-    // Scroll the form into view so the keyboard doesn't hide it (WhatsApp-like behavior)
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
-    }, KEYBOARD_SCROLL_DELAY_MS);
+    // Notify parent so it can scroll to bottom and adjust layout
+    onKeyboardShow?.();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,9 +46,9 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
   const isEditing = !!editingMessage;
 
   return (
-    <div>
+    <div className="bg-white dark:bg-gray-800 border-t dark:border-gray-700">
       {isEditing && (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/30 border-t border-red-100 dark:border-red-800 text-xs text-red-700 dark:text-red-400">
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/30 border-b border-red-100 dark:border-red-800 text-xs text-red-700 dark:text-red-400">
           <span className="flex-1">✏️ Editing message</span>
           <button
             type="button"
@@ -66,7 +62,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
           </button>
         </div>
       )}
-      <form ref={formRef} onSubmit={handleSubmit} className="flex items-center space-x-2 p-4 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+      <form onSubmit={handleSubmit} className="flex items-center space-x-2 px-4 py-3">
         <input
           ref={inputRef}
           type="text"

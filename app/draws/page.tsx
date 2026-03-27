@@ -1,40 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 
 interface Draw {
-  drawNumber: number;
-  date: string;
-  program: string;
-  crsScore: number;
+  drawNumber: string;
+  drawDate: string;
+  drawName: string;
   invitations: number;
+  crsScore: number;
   category: string;
 }
 
-const CATEGORY_STYLES: Record<string, { badge: string; label: string }> = {
-  CEC: {
-    badge: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-    label: 'Canadian Experience Class',
-  },
-  PNP: {
-    badge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
-    label: 'Provincial Nominee Program',
-  },
-  FSW: {
-    badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
-    label: 'Federal Skilled Worker',
-  },
-  General: {
-    badge: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-    label: 'No program specified',
-  },
-};
+const FILTER_OPTIONS = [
+  { value: 'All', label: 'All' },
+  { value: 'CEC', label: 'Canadian Experience Class' },
+  { value: 'PNP', label: 'Provincial Nominee Program' },
+  { value: 'French', label: 'French-Language proficiency' },
+  { value: 'General', label: 'No program specified' },
+  { value: 'Category', label: 'Category-based (Healthcare, STEM, Trade, etc.)' },
+];
 
-function formatDate(dateStr: string): string {
+function formatDDMMMYY(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00Z');
-  return d.toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const mon = months[d.getUTCMonth()];
+  const yr = String(d.getUTCFullYear()).slice(2);
+  return `${day}-${mon}-${yr}`;
 }
 
 export default function DrawsPage() {
@@ -42,6 +36,9 @@ export default function DrawsPage() {
   const router = useRouter();
   const [draws, setDraws] = useState<Draw[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('All');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -53,11 +50,22 @@ export default function DrawsPage() {
     fetch('/draws.json')
       .then((res) => res.json())
       .then((data: Draw[]) => {
-        const sorted = [...data].sort((a, b) => b.drawNumber - a.drawNumber);
+        const sorted = [...data].sort((a, b) => Number(b.drawNumber) - Number(a.drawNumber));
         setDraws(sorted);
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  }, []);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   if (authLoading || loading) {
@@ -69,134 +77,146 @@ export default function DrawsPage() {
   }
 
   const latest = draws[0];
+  const filtered = filter === 'All' ? draws : draws.filter((d) => d.category === filter);
+  const activeFilterLabel = FILTER_OPTIONS.find((o) => o.value === filter)?.label ?? 'All';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto px-4 py-5">
 
-        {/* Page header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Express Entry Draws</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Latest IRCC Express Entry invitation rounds
-          </p>
+        {/* Page title */}
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Express Entry Draws</h1>
+
+        {/* Top summary row */}
+        {latest && (
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {/* Calculate score */}
+            <a
+              href="https://www.cic.gc.ca/english/immigrate/skilled/crs-tool.asp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col items-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              <svg className="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <span className="text-xs font-semibold text-red-600 text-center leading-tight">Calculate Your Score</span>
+            </a>
+
+            {/* Latest draw info */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col items-center justify-center text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Latest Draw</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mt-1">{formatDDMMMYY(latest.drawDate)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{latest.invitations.toLocaleString()} invited</p>
+            </div>
+
+            {/* Min ITA score */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex flex-col items-center justify-center text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Min ITA Score</p>
+              <p className="text-3xl font-extrabold text-red-600 mt-1">{latest.crsScore}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Filter by type */}
+        <div ref={filterRef} className="relative mb-4">
+          <button
+            onClick={() => setFilterOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            Filter By Type
+            {filter !== 'All' && (
+              <span className="ml-1 text-xs bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">
+                {activeFilterLabel}
+              </span>
+            )}
+            <svg className={`w-4 h-4 transition-transform ${filterOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {filterOpen && (
+            <div className="absolute left-0 top-full mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-30 overflow-hidden">
+              {FILTER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { setFilter(opt.value); setFilterOpen(false); }}
+                  className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center justify-between ${
+                    filter === opt.value
+                      ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-semibold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                  {filter === opt.value && (
+                    <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Summary stats */}
-        {latest && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Latest CRS</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{latest.crsScore}</p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Invitations</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{latest.invitations.toLocaleString()}</p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Latest Draw</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">#{latest.drawNumber}</p>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Draw Date</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mt-1">{formatDate(latest.date)}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Desktop table */}
-        {draws.length === 0 ? (
+        {/* Draws table */}
+        {filtered.length === 0 ? (
           <div className="text-center py-16 text-gray-500 dark:text-gray-400">
             <div className="text-5xl mb-4">📊</div>
-            <p>No draws data available.</p>
+            <p>No draws found for this filter.</p>
           </div>
         ) : (
-          <>
-            {/* Desktop table view */}
-            <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Draw #</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Program</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">CRS Score</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Invitations</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {draws.map((draw, idx) => {
-                    const style = CATEGORY_STYLES[draw.category] ?? CATEGORY_STYLES.General;
-                    return (
-                      <tr
-                        key={draw.drawNumber}
-                        className="border-b dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                      >
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900 dark:text-white">#{draw.drawNumber}</span>
-                            {idx === 0 && (
-                              <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">
-                                Latest
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-sm text-gray-700 dark:text-gray-300">{formatDate(draw.date)}</td>
-                        <td className="px-5 py-4">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
-                            {draw.category === 'General' ? 'No program' : draw.category}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right font-bold text-gray-900 dark:text-white">{draw.crsScore}</td>
-                        <td className="px-5 py-4 text-right text-sm text-gray-700 dark:text-gray-300">{draw.invitations.toLocaleString()}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
+            {/* Table header */}
+            <div className="grid grid-cols-[80px_1fr_56px] sm:grid-cols-[90px_1fr_80px_80px] border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-4 py-2">
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Type</span>
+              <span className="hidden sm:block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Invited</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Score</span>
             </div>
 
-            {/* Mobile card view */}
-            <div className="sm:hidden space-y-3">
-              {draws.map((draw, idx) => {
-                const style = CATEGORY_STYLES[draw.category] ?? CATEGORY_STYLES.General;
-                return (
-                  <div key={draw.drawNumber} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-900 dark:text-white">Draw #{draw.drawNumber}</span>
-                        {idx === 0 && (
-                          <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-semibold">
-                            Latest
-                          </span>
-                        )}
-                      </div>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style.badge}`}>
-                        {draw.category === 'General' ? 'No program' : draw.category}
+            {/* Table rows */}
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {filtered.map((draw, idx) => (
+                <div
+                  key={draw.drawNumber}
+                  className="grid grid-cols-[80px_1fr_56px] sm:grid-cols-[90px_1fr_80px_80px] px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                >
+                  {/* Date */}
+                  <div className="flex flex-col justify-center">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{formatDDMMMYY(draw.drawDate)}</span>
+                    {idx === 0 && (
+                      <span className="text-[10px] bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full font-semibold mt-0.5 w-fit">
+                        Latest
                       </span>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">{formatDate(draw.date)}</div>
-                    <div className="flex gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">CRS Score</p>
-                        <p className="text-lg font-bold text-red-600">{draw.crsScore}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Invitations</p>
-                        <p className="text-lg font-bold text-gray-900 dark:text-white">{draw.invitations.toLocaleString()}</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                );
-              })}
+
+                  {/* Draw name */}
+                  <div className="flex items-center min-w-0 pr-2">
+                    <span className="text-xs text-gray-800 dark:text-gray-200 leading-snug line-clamp-2">{draw.drawName}</span>
+                  </div>
+
+                  {/* Invited (hidden on mobile) */}
+                  <span className="hidden sm:flex items-center justify-end text-xs text-gray-600 dark:text-gray-400">
+                    {draw.invitations.toLocaleString()}
+                  </span>
+
+                  {/* CRS score */}
+                  <span className="flex items-center justify-end text-sm font-bold text-gray-900 dark:text-white">
+                    {draw.crsScore}
+                  </span>
+                </div>
+              ))}
             </div>
-          </>
+          </div>
         )}
 
-        {/* Last updated note */}
-        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
-          Data sourced from IRCC Express Entry draws · Last updated {draws.length > 0 ? formatDate(draws[0].date) : '—'}
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-5">
+          Data sourced from IRCC Express Entry draws · {draws.length > 0 ? `Last updated ${formatDDMMMYY(draws[0].drawDate)}` : '—'}
         </p>
       </div>
     </div>
