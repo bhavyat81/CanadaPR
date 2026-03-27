@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { generateMonths } from '@/lib/months';
 import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, VISA_OFFICE_STEPS, VISA_OFFICES, formatStepDate } from '@/lib/categories';
+import { getAvatarUrl } from '@/lib/avatars';
 
 const PR_MONTHS = generateMonths();
 
@@ -178,53 +180,68 @@ export default function ProfilePage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
 
+  const avatarUrl = user ? getAvatarUrl(user.id) : null;
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-lg p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
+      <div className="max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
         <div className="text-center mb-8">
-          <div className="text-4xl mb-2">👤</div>
-          <h1 className="text-2xl font-bold text-gray-800">Your Profile</h1>
-          <p className="text-gray-500 mt-1">Tell us about your PR application</p>
+          {avatarUrl ? (
+            <div className="flex justify-center mb-3">
+              <Image
+                src={avatarUrl}
+                alt="Your avatar"
+                width={64}
+                height={64}
+                className="rounded-full"
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div className="text-4xl mb-2">👤</div>
+          )}
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Your Profile</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Tell us about your PR application</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-6">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg mb-6">
             {success}
           </div>
         )}
 
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Name</label>
             <input
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
               placeholder="Your name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">PR Application Month</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PR Application Month</label>
             <select
               value={prMonth}
               onChange={(e) => setPrMonth(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
               <option value="">Select your application month</option>
               {PR_MONTHS.map(({ value, label }) => (
@@ -234,11 +251,11 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">PR Category</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PR Category</label>
             <select
               value={prCategory}
               onChange={(e) => setPrCategory(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
               <option value="">Select your PR category</option>
               {PR_CATEGORIES.map((cat) => (
@@ -249,10 +266,10 @@ export default function ProfilePage() {
 
           {/* Journey Step Dates */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               PR Journey Milestones <span className="text-gray-400 font-normal">(tap a milestone to set its value)</span>
             </label>
-            <div className="flex flex-col divide-y divide-gray-100 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex flex-col divide-y divide-gray-100 dark:divide-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               {JOURNEY_STEPS.map((step) => {
                 const isVisaOfficeStep = VISA_OFFICE_STEPS.includes(step);
                 return (
@@ -260,24 +277,24 @@ export default function ProfilePage() {
                     <button
                       type="button"
                       onClick={() => setActiveStep(activeStep === step ? null : step)}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 transition-colors text-left"
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                     >
                       <span className="flex items-center gap-2">
                         <span className="text-base w-6 text-center">{JOURNEY_STEP_EMOJIS[step] ?? '📌'}</span>
-                        <span className="text-sm text-gray-800">{step}</span>
+                        <span className="text-sm text-gray-800 dark:text-gray-200">{step}</span>
                       </span>
-                      <span className="text-xs text-gray-500 ml-2 shrink-0">
-                        {stepDates[step] ? (isVisaOfficeStep ? stepDates[step] : formatStepDate(stepDates[step])) : <span className="text-gray-300">—</span>}
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 shrink-0">
+                        {stepDates[step] ? (isVisaOfficeStep ? stepDates[step] : formatStepDate(stepDates[step])) : <span className="text-gray-300 dark:text-gray-600">—</span>}
                       </span>
                     </button>
                     {activeStep === step && (
-                      <div className="px-4 pb-3 pt-1 flex items-center gap-2 bg-white border-t border-gray-100">
+                      <div className="px-4 pb-3 pt-1 flex items-center gap-2 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
                         {isVisaOfficeStep ? (
                           <select
                             value={stepDates[step] || ''}
                             onChange={(e) => handleStepDate(step, e.target.value)}
                             autoFocus
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                           >
                             <option value="">Select visa office</option>
                             {VISA_OFFICES.map((office) => (
@@ -290,7 +307,7 @@ export default function ProfilePage() {
                             value={stepDates[step] || ''}
                             onChange={(e) => handleStepDate(step, e.target.value)}
                             autoFocus
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                           />
                         )}
                         {stepDates[step] && (
@@ -321,12 +338,12 @@ export default function ProfilePage() {
         </form>
 
         {/* Delete Account Section */}
-        <div className="mt-10 pt-6 border-t border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Danger Zone</h2>
+        <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Danger Zone</h2>
           <button
             type="button"
             onClick={() => setShowDeleteModal(true)}
-            className="w-full border border-red-300 text-red-600 py-3 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+            className="w-full border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 py-3 rounded-lg font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           >
             Delete My Account
           </button>
@@ -336,18 +353,18 @@ export default function ProfilePage() {
       {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center px-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-md">
             <div className="text-center mb-6">
               <div className="text-4xl mb-3">⚠️</div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Delete Account</h2>
-              <p className="text-gray-600 text-sm">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Delete Account</h2>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">
                 Are you sure you want to delete your account? This will permanently delete all your
                 data including your profile, messages, and group memberships. This action cannot be undone.
               </p>
             </div>
 
             {deleteError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
                 {deleteError}
               </div>
             )}
@@ -365,7 +382,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => { setShowDeleteModal(false); setDeleteError(''); }}
                 disabled={deleteLoading}
-                className="w-full border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>

@@ -29,19 +29,19 @@ export default function StatusTimeline({ journeySteps, applicationStatus }: Stat
         return (
           <div key={step} className="flex items-center gap-3">
             <span className="text-base w-6 text-center">{done ? (JOURNEY_STEP_EMOJIS[step] ?? '✅') : '⬜'}</span>
-            <span className={`text-sm ${done ? 'text-gray-800 font-medium' : 'text-gray-400'}`}>
+            <span className={`text-sm ${done ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
               {step}
               {done && (
-                <span className="ml-2 text-gray-500 font-normal">— {formatStepDate(date ?? '')}</span>
+                <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">— {formatStepDate(date ?? '')}</span>
               )}
-              {!done && <span className="ml-2 text-gray-400 font-normal">— Pending</span>}
+              {!done && <span className="ml-2 text-gray-400 dark:text-gray-600 font-normal">— Pending</span>}
             </span>
           </div>
         );
       })}
       {/* Legacy fallback: show raw status string if no journey steps provided */}
       {!journeySteps && applicationStatus && (
-        <div className="mt-2 text-xs text-gray-400">Status: {applicationStatus}</div>
+        <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">Status: {applicationStatus}</div>
       )}
     </div>
   );
