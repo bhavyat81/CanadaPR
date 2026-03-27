@@ -62,7 +62,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Handle Capacitor app resume — refresh the expired session
+    let unmounted = false;
+    let appStateCleanup: (() => void) | undefined;
+
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { App } = await import('@capacitor/app');
+          const listener = await App.addListener('appStateChange', async ({ isActive }) => {
+            if (isActive) {
+              await supabase.auth.startAutoRefresh();
+            } else {
+              await supabase.auth.stopAutoRefresh();
+            }
+          });
+          if (unmounted) {
+            listener.remove();
+          } else {
+            appStateCleanup = () => listener.remove();
+          }
+        }
+      } catch {
+        // Not running in Capacitor — ignore
+      }
+    })();
+
+    return () => {
+      unmounted = true;
+      subscription.unsubscribe();
+      appStateCleanup?.();
+    };
   }, []);
 
   return (
