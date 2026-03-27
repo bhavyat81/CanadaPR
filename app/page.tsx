@@ -1,21 +1,137 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import LatestDrawCard from '@/components/LatestDrawCard';
 
+function AccordionSection({
+  title,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  id: string;
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+      >
+        <span className="font-semibold text-gray-800 dark:text-slate-100">{title}</span>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="px-5 pb-5">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LoggedInDashboard() {
+  const [openSections, setOpenSections] = useState<string[]>(['quick-links']);
+
+  const toggle = (id: string) => {
+    setOpenSections(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  const isOpen = (id: string) => openSections.includes(id);
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 page-fade-in">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-6">
+          🍁 Welcome back!
+        </h1>
+
+        <div className="space-y-3">
+          <AccordionSection
+            id="latest-draw"
+            title="📊 Latest Express Entry Draw"
+            isOpen={isOpen('latest-draw')}
+            onToggle={() => toggle('latest-draw')}
+          >
+            <LatestDrawCard />
+            <Link href="/draws" className="block mt-3 text-center text-sm text-red-600 dark:text-red-400 hover:underline">
+              View all draws →
+            </Link>
+          </AccordionSection>
+
+          <AccordionSection
+            id="my-groups"
+            title="💬 My Groups"
+            isOpen={isOpen('my-groups')}
+            onToggle={() => toggle('my-groups')}
+          >
+            <div className="space-y-2">
+              <Link href="/groups" className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+                <span className="text-gray-700 dark:text-slate-200">Browse &amp; join groups</span>
+                <span className="text-gray-400">→</span>
+              </Link>
+            </div>
+          </AccordionSection>
+
+          <AccordionSection
+            id="pr-journey"
+            title="🛤️ My PR Journey"
+            isOpen={isOpen('pr-journey')}
+            onToggle={() => toggle('pr-journey')}
+          >
+            <Link href="/profile" className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+              <span className="text-gray-700 dark:text-slate-200">Update my profile &amp; journey</span>
+              <span className="text-gray-400">→</span>
+            </Link>
+          </AccordionSection>
+
+          <AccordionSection
+            id="quick-links"
+            title="⚡ Quick Links"
+            isOpen={isOpen('quick-links')}
+            onToggle={() => toggle('quick-links')}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { href: '/calculator', emoji: '🧮', label: 'CRS Calculator' },
+                { href: '/vault', emoji: '🔒', label: 'My Vault' },
+                { href: '/profile', emoji: '👤', label: 'My Profile' },
+                { href: '/draws', emoji: '📊', label: 'All Draws' },
+              ].map(({ href, emoji, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 hover:border-red-200 dark:hover:border-red-800 hover:shadow-sm transition-all"
+                >
+                  <span className="text-2xl">{emoji}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-slate-200">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </AccordionSection>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace('/welcome');
-    }
-  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -26,7 +142,7 @@ export default function Home() {
   }
 
   if (user) {
-    return null;
+    return <LoggedInDashboard />;
   }
 
   return (

@@ -83,6 +83,8 @@ export default function CategoryChat({
   } | null>(null);
   // Edit mode for own messages
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
@@ -544,7 +546,14 @@ export default function CategoryChat({
     );
   }
 
-  const visibleMessages = messages.filter((m) => !blockedIds.has(m.sender_id));
+  const visibleMessages = messages.filter((m) => {
+    if (blockedIds.has(m.sender_id)) return false;
+    if (searchQuery) {
+      return m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.sender_name.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    return true;
+  });
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
   return (
@@ -561,6 +570,15 @@ export default function CategoryChat({
             </p>
           </div>
           <MembersPanel members={members} />
+          <button
+            onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-colors"
+            title="Search messages"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </button>
           {isMember && (
             <button
               onClick={() => setShowLeaveConfirm(true)}
@@ -605,45 +623,34 @@ export default function CategoryChat({
         </div>
       )}
 
-      {/* Messages Area — Toronto skyline background */}
+      {showSearch && (
+        <div className="px-4 py-2 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700">
+          <input
+            type="search"
+            placeholder="Search messages..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            autoFocus
+            className="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+          />
+        </div>
+      )}
+
+      {/* Messages Area — maple leaf watermark background */}
       <div
         className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 relative"
         style={{
           background: 'var(--chat-bg, #f9fafb)',
         }}
       >
-        {/* Toronto skyline silhouette (subtle, ~12% opacity) */}
+      {/* Maple leaf watermark (subtle, ~12% opacity) */}
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed bottom-16 left-0 right-0 z-0 flex justify-center"
+          className="pointer-events-none fixed bottom-16 left-0 right-0 z-0 flex justify-center items-center"
           style={{ opacity: 0.12 }}
         >
-          <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg" className="w-full max-w-2xl" preserveAspectRatio="xMidYMax meet">
-            {/* Toronto skyline silhouette */}
-            <g fill="currentColor" className="text-gray-600 dark:text-slate-300">
-              {/* CN Tower */}
-              <rect x="380" y="20" width="8" height="180"/>
-              <polygon points="384,10 376,50 392,50"/>
-              <rect x="375" y="50" width="18" height="15"/>
-              {/* Rogers Centre dome */}
-              <ellipse cx="360" cy="190" rx="30" ry="12"/>
-              <rect x="330" y="155" width="60" height="35"/>
-              {/* Buildings left side */}
-              <rect x="50" y="100" width="40" height="100"/>
-              <rect x="100" y="80" width="50" height="120"/>
-              <rect x="160" y="110" width="35" height="90"/>
-              <rect x="205" y="90" width="45" height="110"/>
-              <rect x="260" y="120" width="30" height="80"/>
-              <rect x="300" y="70" width="55" height="130"/>
-              {/* Buildings right side */}
-              <rect x="420" y="85" width="45" height="115"/>
-              <rect x="475" y="105" width="35" height="95"/>
-              <rect x="520" y="75" width="50" height="125"/>
-              <rect x="580" y="95" width="40" height="105"/>
-              <rect x="630" y="115" width="30" height="85"/>
-              <rect x="670" y="80" width="45" height="120"/>
-              <rect x="725" y="100" width="35" height="100"/>
-            </g>
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-64 h-64" aria-hidden="true">
+            <path d="M50 5 L55 25 L75 20 L65 35 L85 40 L68 45 L75 65 L58 55 L62 80 L50 70 L38 80 L42 55 L25 65 L32 45 L15 40 L35 35 L25 20 L45 25 Z" fill="currentColor" className="text-red-500 dark:text-red-400"/>
           </svg>
         </div>
 

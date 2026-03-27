@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { generateMonths } from '@/lib/months';
+import { requestNotificationPermission, getNotificationPermission } from '@/lib/notifications';
 import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, VISA_OFFICE_STEPS, VISA_OFFICES, formatStepDate } from '@/lib/categories';
 
 const PR_MONTHS = generateMonths();
 
 // ─── Avatar definitions ───────────────────────────────────────────────────────
 const AVATAR_LIST = [
-  // adventurer – diverse skin tones
+  // adventurer – diverse skin tones (28 total)
   { style: 'adventurer', seed: 'Anna',    skinColor: 'f2d3b1' },
   { style: 'adventurer', seed: 'Raj',     skinColor: 'c68642' },
   { style: 'adventurer', seed: 'Amara',   skinColor: '8d5524' },
@@ -21,21 +22,69 @@ const AVATAR_LIST = [
   { style: 'adventurer', seed: 'Chen',    skinColor: 'f2d3b1' },
   { style: 'adventurer', seed: 'Sofia',   skinColor: 'd6a27d' },
   { style: 'adventurer', seed: 'Kali',    skinColor: '8d5524' },
-  // big-ears
+  { style: 'adventurer', seed: 'Tariq',   skinColor: 'a0522d' },
+  { style: 'adventurer', seed: 'Mei',     skinColor: 'ffd5b8' },
+  { style: 'adventurer', seed: 'Hassan',  skinColor: '4a2c0a' },
+  { style: 'adventurer', seed: 'Ingrid',  skinColor: 'f2d3b1' },
+  { style: 'adventurer', seed: 'Yara',    skinColor: 'e0ac69' },
+  { style: 'adventurer', seed: 'Kwame',   skinColor: '4a2c0a' },
+  { style: 'adventurer', seed: 'Elena',   skinColor: 'd6a27d' },
+  { style: 'adventurer', seed: 'Lior',    skinColor: 'c68642' },
+  { style: 'adventurer', seed: 'Nadia',   skinColor: '8d5524' },
+  { style: 'adventurer', seed: 'Omar',    skinColor: 'a0522d' },
+  { style: 'adventurer', seed: 'Zoe',     skinColor: 'ffd5b8' },
+  { style: 'adventurer', seed: 'Diego',   skinColor: 'c68642' },
+  { style: 'adventurer', seed: 'Fatima',  skinColor: '8d5524' },
+  { style: 'adventurer', seed: 'Sven',    skinColor: 'f2d3b1' },
+  { style: 'adventurer', seed: 'Layla',   skinColor: 'e0ac69' },
+  { style: 'adventurer', seed: 'Kofi',    skinColor: '4a2c0a' },
+  { style: 'adventurer', seed: 'Rina',    skinColor: 'ffd5b8' },
+  { style: 'adventurer', seed: 'Pedro',   skinColor: 'd6a27d' },
+  { style: 'adventurer', seed: 'Asel',    skinColor: 'c68642' },
+  { style: 'adventurer', seed: 'Binta',   skinColor: '4a2c0a' },
+  // big-ears (20 total)
   { style: 'big-ears', seed: 'Felix' },
   { style: 'big-ears', seed: 'Luna' },
   { style: 'big-ears', seed: 'Coco' },
   { style: 'big-ears', seed: 'Milo' },
   { style: 'big-ears', seed: 'Nova' },
   { style: 'big-ears', seed: 'Zara' },
-  // fun-emoji
+  { style: 'big-ears', seed: 'Oscar' },
+  { style: 'big-ears', seed: 'Bella' },
+  { style: 'big-ears', seed: 'Max' },
+  { style: 'big-ears', seed: 'Ivy' },
+  { style: 'big-ears', seed: 'Finn' },
+  { style: 'big-ears', seed: 'Aria' },
+  { style: 'big-ears', seed: 'Leo' },
+  { style: 'big-ears', seed: 'Nora' },
+  { style: 'big-ears', seed: 'Sam' },
+  { style: 'big-ears', seed: 'Tara' },
+  { style: 'big-ears', seed: 'Hugo' },
+  { style: 'big-ears', seed: 'Vera' },
+  { style: 'big-ears', seed: 'Jack' },
+  { style: 'big-ears', seed: 'Mia' },
+  // fun-emoji (20 total)
   { style: 'fun-emoji', seed: 'Happy' },
   { style: 'fun-emoji', seed: 'Cool' },
   { style: 'fun-emoji', seed: 'Silly' },
   { style: 'fun-emoji', seed: 'Brave' },
   { style: 'fun-emoji', seed: 'Spark' },
   { style: 'fun-emoji', seed: 'Blaze' },
-  // avataaars
+  { style: 'fun-emoji', seed: 'Jolly' },
+  { style: 'fun-emoji', seed: 'Cheery' },
+  { style: 'fun-emoji', seed: 'Sunny' },
+  { style: 'fun-emoji', seed: 'Goofy' },
+  { style: 'fun-emoji', seed: 'Zippy' },
+  { style: 'fun-emoji', seed: 'Breezy' },
+  { style: 'fun-emoji', seed: 'Quirky' },
+  { style: 'fun-emoji', seed: 'Zesty' },
+  { style: 'fun-emoji', seed: 'Peppy' },
+  { style: 'fun-emoji', seed: 'Nifty' },
+  { style: 'fun-emoji', seed: 'Dandy' },
+  { style: 'fun-emoji', seed: 'Snappy' },
+  { style: 'fun-emoji', seed: 'Fizzy' },
+  { style: 'fun-emoji', seed: 'Wacky' },
+  // avataaars (28 total)
   { style: 'avataaars', seed: 'John' },
   { style: 'avataaars', seed: 'Emily' },
   { style: 'avataaars', seed: 'Carlos' },
@@ -44,13 +93,73 @@ const AVATAR_LIST = [
   { style: 'avataaars', seed: 'Luca' },
   { style: 'avataaars', seed: 'Yuki' },
   { style: 'avataaars', seed: 'Omar' },
-  // bottts – robots
+  { style: 'avataaars', seed: 'Sara' },
+  { style: 'avataaars', seed: 'Ravi' },
+  { style: 'avataaars', seed: 'Nadia' },
+  { style: 'avataaars', seed: 'Ben' },
+  { style: 'avataaars', seed: 'Fatima' },
+  { style: 'avataaars', seed: 'Tom' },
+  { style: 'avataaars', seed: 'Zoe' },
+  { style: 'avataaars', seed: 'Diego' },
+  { style: 'avataaars', seed: 'Hana' },
+  { style: 'avataaars', seed: 'Ivan' },
+  { style: 'avataaars', seed: 'Lily' },
+  { style: 'avataaars', seed: 'Marcus' },
+  { style: 'avataaars', seed: 'Nina' },
+  { style: 'avataaars', seed: 'Otto' },
+  { style: 'avataaars', seed: 'Paula' },
+  { style: 'avataaars', seed: 'Quinn' },
+  { style: 'avataaars', seed: 'Rose' },
+  { style: 'avataaars', seed: 'Steve' },
+  { style: 'avataaars', seed: 'Tina' },
+  { style: 'avataaars', seed: 'Ulric' },
+  // bottts – robots (20 total)
   { style: 'bottts', seed: 'Robot1' },
   { style: 'bottts', seed: 'Robot2' },
   { style: 'bottts', seed: 'Robot3' },
   { style: 'bottts', seed: 'Robot4' },
   { style: 'bottts', seed: 'Robot5' },
   { style: 'bottts', seed: 'Robot6' },
+  { style: 'bottts', seed: 'Cyborg' },
+  { style: 'bottts', seed: 'Droid' },
+  { style: 'bottts', seed: 'Android' },
+  { style: 'bottts', seed: 'Nexus' },
+  { style: 'bottts', seed: 'Pixel' },
+  { style: 'bottts', seed: 'Byte' },
+  { style: 'bottts', seed: 'Chip' },
+  { style: 'bottts', seed: 'Circuit' },
+  { style: 'bottts', seed: 'Nano' },
+  { style: 'bottts', seed: 'Omega' },
+  { style: 'bottts', seed: 'Sigma' },
+  { style: 'bottts', seed: 'Delta' },
+  { style: 'bottts', seed: 'Alpha' },
+  { style: 'bottts', seed: 'Beta' },
+  // lorelei (12 total)
+  { style: 'lorelei', seed: 'Grace' },
+  { style: 'lorelei', seed: 'Hope' },
+  { style: 'lorelei', seed: 'Joy' },
+  { style: 'lorelei', seed: 'Faith' },
+  { style: 'lorelei', seed: 'Dawn' },
+  { style: 'lorelei', seed: 'Iris' },
+  { style: 'lorelei', seed: 'Ruby' },
+  { style: 'lorelei', seed: 'Pearl' },
+  { style: 'lorelei', seed: 'Jade' },
+  { style: 'lorelei', seed: 'Opal' },
+  { style: 'lorelei', seed: 'Amber' },
+  { style: 'lorelei', seed: 'Coral' },
+  // pixel-art (12 total)
+  { style: 'pixel-art', seed: 'Pixel1' },
+  { style: 'pixel-art', seed: 'Pixel2' },
+  { style: 'pixel-art', seed: 'Pixel3' },
+  { style: 'pixel-art', seed: 'Pixel4' },
+  { style: 'pixel-art', seed: 'Pixel5' },
+  { style: 'pixel-art', seed: 'Pixel6' },
+  { style: 'pixel-art', seed: 'Pixel7' },
+  { style: 'pixel-art', seed: 'Pixel8' },
+  { style: 'pixel-art', seed: 'Pixel9' },
+  { style: 'pixel-art', seed: 'Pixel10' },
+  { style: 'pixel-art', seed: 'Pixel11' },
+  { style: 'pixel-art', seed: 'Pixel12' },
 ];
 
 function avatarUrl({ style, seed, skinColor }: { style: string; seed: string; skinColor?: string }) {
@@ -77,6 +186,10 @@ export default function ProfilePage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<string>('default');
+  const [blockedUsers, setBlockedUsers] = useState<{id: string; blocked_user_id: string; display_name: string}[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -100,6 +213,7 @@ export default function ProfilePage() {
         setPrStream(data.pr_stream || '');
         setPrCategory(data.pr_category || '');
         setAvatarUrl(data.avatar_url || '');
+        setNotificationsEnabled(data.notifications_enabled ?? false);
 
         // Load PVO/SVO from profiles text columns into stepDates
         const visaOfficeValues: Record<string, string> = {};
@@ -118,9 +232,32 @@ export default function ProfilePage() {
         });
         setStepDates((prev) => ({ ...prev, ...dates }));
       }
+
+      setNotifPermission(getNotificationPermission());
     };
 
     loadProfile();
+
+    const loadBlockedUsers = async () => {
+      setLoadingBlocked(true);
+      const { data } = await supabase
+        .from('blocked_users')
+        .select('id, blocked_user_id, profiles!blocked_users_blocked_user_id_fkey(display_name)')
+        .eq('user_id', user.id);
+      if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setBlockedUsers(data.map((b: any) => ({
+          id: b.id,
+          blocked_user_id: b.blocked_user_id,
+          display_name: Array.isArray(b.profiles)
+            ? (b.profiles[0]?.display_name || '')
+            : (b.profiles?.display_name || ''),
+        })));
+      }
+      setLoadingBlocked(false);
+    };
+
+    loadBlockedUsers().catch(() => setLoadingBlocked(false));
   }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -144,6 +281,7 @@ export default function ProfilePage() {
       pr_category: prCategory,
       avatar_url: avatarUrl_state || null,
       application_status: applicationStatus,
+      notifications_enabled: notificationsEnabled,
       pvo: stepDates['PVO (Inland)'] || null,
       svo: stepDates['SVO (Inland)'] || null,
       updated_at: new Date().toISOString(),
@@ -392,6 +530,71 @@ export default function ProfilePage() {
             {loading ? 'Saving...' : 'Save Profile'}
           </button>
         </form>
+
+        {/* Notifications */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 mt-6">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4">🔔 Notifications</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-gray-700 dark:text-slate-200">Push Notifications</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                {notifPermission === 'unsupported' ? 'Not supported on this device' :
+                 notifPermission === 'denied' ? 'Blocked — enable in browser settings' :
+                 'Show notifications for new messages'}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={notifPermission === 'unsupported' || notifPermission === 'denied'}
+              onClick={async () => {
+                if (!notificationsEnabled) {
+                  const granted = await requestNotificationPermission();
+                  if (granted) {
+                    setNotificationsEnabled(true);
+                    setNotifPermission('granted');
+                  }
+                } else {
+                  setNotificationsEnabled(false);
+                }
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                notificationsEnabled ? 'bg-red-600' : 'bg-gray-200 dark:bg-slate-600'
+              } disabled:opacity-40`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                notificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Blocked Users */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 mt-6">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4">🚫 Blocked Users</h2>
+          {loadingBlocked ? (
+            <p className="text-sm text-gray-500 dark:text-slate-400">Loading…</p>
+          ) : blockedUsers.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-slate-400">You haven&apos;t blocked anyone.</p>
+          ) : (
+            <div className="space-y-2">
+              {blockedUsers.map(bu => (
+                <div key={bu.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
+                  <span className="text-gray-700 dark:text-slate-200 text-sm">{bu.display_name || bu.blocked_user_id.slice(0, 8)}</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await supabase.from('blocked_users').delete().eq('id', bu.id);
+                      setBlockedUsers(prev => prev.filter(b => b.id !== bu.id));
+                    }}
+                    className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                  >
+                    Unblock
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Delete Account Section */}
         <div className="mt-10 pt-6 border-t border-gray-200 dark:border-slate-700">
