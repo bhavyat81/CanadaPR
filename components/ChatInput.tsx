@@ -132,8 +132,14 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
   }, [editingMessage]);
 
   const handleFocus = () => {
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      const onViewportResize = () => {
+        window.scrollTo(0, document.body.scrollHeight);
+      };
+      window.visualViewport.addEventListener('resize', onViewportResize, { once: true });
+    }
     setTimeout(() => {
-      formRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, KEYBOARD_SCROLL_DELAY_MS);
   };
 

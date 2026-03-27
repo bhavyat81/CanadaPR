@@ -310,6 +310,16 @@ export default function CategoryChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const handleResize = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+    viewport.addEventListener('resize', handleResize);
+    return () => viewport.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleJoinGroup = async () => {
     if (!user || joiningGroup) return;
     setJoiningGroup(true);
@@ -596,49 +606,12 @@ export default function CategoryChat({
         </div>
       )}
 
-      {/* Messages Area — Toronto skyline background */}
+      {/* Messages Area */}
       <div
-        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 relative"
-        style={{
-          background: 'var(--chat-bg, #f9fafb)',
-        }}
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 bg-gray-50 dark:bg-slate-900"
+        style={{ touchAction: 'pan-y' }}
       >
-        {/* Toronto skyline silhouette (subtle, ~12% opacity) */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed bottom-16 left-0 right-0 z-0 flex justify-center"
-          style={{ opacity: 0.12 }}
-        >
-          <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg" className="w-full max-w-2xl" preserveAspectRatio="xMidYMax meet">
-            {/* Toronto skyline silhouette */}
-            <g fill="currentColor" className="text-gray-600 dark:text-slate-300">
-              {/* CN Tower */}
-              <rect x="380" y="20" width="8" height="180"/>
-              <polygon points="384,10 376,50 392,50"/>
-              <rect x="375" y="50" width="18" height="15"/>
-              {/* Rogers Centre dome */}
-              <ellipse cx="360" cy="190" rx="30" ry="12"/>
-              <rect x="330" y="155" width="60" height="35"/>
-              {/* Buildings left side */}
-              <rect x="50" y="100" width="40" height="100"/>
-              <rect x="100" y="80" width="50" height="120"/>
-              <rect x="160" y="110" width="35" height="90"/>
-              <rect x="205" y="90" width="45" height="110"/>
-              <rect x="260" y="120" width="30" height="80"/>
-              <rect x="300" y="70" width="55" height="130"/>
-              {/* Buildings right side */}
-              <rect x="420" y="85" width="45" height="115"/>
-              <rect x="475" y="105" width="35" height="95"/>
-              <rect x="520" y="75" width="50" height="125"/>
-              <rect x="580" y="95" width="40" height="105"/>
-              <rect x="630" y="115" width="30" height="85"/>
-              <rect x="670" y="80" width="45" height="120"/>
-              <rect x="725" y="100" width="35" height="100"/>
-            </g>
-          </svg>
-        </div>
-
-        <div className="max-w-4xl mx-auto relative z-10">
+        <div className="max-w-4xl mx-auto">
           {loadingMessages ? (
             <div className="text-center text-gray-500 dark:text-slate-400 py-8">Loading messages...</div>
           ) : visibleMessages.length === 0 ? (
