@@ -16,6 +16,19 @@ import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 import { showLocalNotification } from '@/lib/notifications';
 
+// Capacitor Keyboard plugin (only runs on native — no-op in browser)
+import type { KeyboardPlugin, KeyboardInfo } from '@capacitor/keyboard';
+
+let CapacitorKeyboard: KeyboardPlugin | null = null;
+
+if (typeof window !== 'undefined') {
+  import('@capacitor/keyboard').then((m) => {
+    CapacitorKeyboard = m.Keyboard as KeyboardPlugin;
+  }).catch(() => {
+    // Not running in Capacitor — ignore
+  });
+}
+
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
 const EDIT_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -102,6 +115,10 @@ export default function CategoryChat({
   const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
 
+  // Keyboard height state for WhatsApp-style layout adjustment
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
 
@@ -114,6 +131,44 @@ export default function CategoryChat({
   useEffect(() => {
     blockedIdsRef.current = blockedIds;
   }, [blockedIds]);
+
+  // Capacitor Keyboard — WhatsApp-style: push layout up when keyboard appears
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let showListener: { remove: () => void } | null = null;
+    let hideListener: { remove: () => void } | null = null;
+
+    const setup = async () => {
+      const kb = CapacitorKeyboard;
+      if (!kb) return;
+
+      try {
+        await kb.setAccessoryBarVisible({ isVisible: false });
+        await kb.setScroll({ isDisabled: true });
+      } catch {
+        // Not available on all platforms
+      }
+
+      showListener = await kb.addListener('keyboardWillShow', (info: KeyboardInfo) => {
+        setKeyboardHeight(info.keyboardHeight);
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      });
+
+      hideListener = await kb.addListener('keyboardWillHide', () => {
+        setKeyboardHeight(0);
+      });
+    };
+
+    setup();
+
+    return () => {
+      showListener?.remove();
+      hideListener?.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -698,7 +753,10 @@ export default function CategoryChat({
   const pinnedMessageIds = new Set(pinnedMessages.map((p) => p.message_id));
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
+    <div
+      className="flex flex-col"
+      style={{ height: 'calc(100dvh - 64px)', paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'env(safe-area-inset-bottom)' }}
+    >
       {/* Chat Header */}
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
@@ -812,7 +870,7 @@ export default function CategoryChat({
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 py-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 py-4">
         <div className="max-w-4xl mx-auto">
           {loadingMessages ? (
             <div className="text-center text-gray-500 dark:text-gray-400 py-8">Loading messages...</div>
@@ -899,6 +957,11 @@ export default function CategoryChat({
             onSendMessage={handleSendMessage}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
+            onKeyboardShow={() => {
+              setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 50);
+            }}
           />
         ) : (
           <div className="p-4 border-t dark:border-gray-700 text-center text-gray-400 dark:text-gray-500 text-sm">Checking membership...</div>
