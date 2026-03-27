@@ -2,23 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
-import { JOURNEY_STEPS, VISA_OFFICE_STEPS, VISA_OFFICES } from '@/lib/categories';
-import LatestDrawCard from '@/components/LatestDrawCard';
-
-const SUCCESS_REDIRECT_DELAY = 1500;
 
 export default function WelcomePage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [step, setStep] = useState(1);
   const [displayName, setDisplayName] = useState('');
-  const [selectedStep, setSelectedStep] = useState('');
-  const [selectedValue, setSelectedValue] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -47,80 +39,19 @@ export default function WelcomePage() {
     loadProfile();
   }, [user, router]);
 
-  const isVisaOfficeStep = VISA_OFFICE_STEPS.includes(selectedStep);
-
-  const handleSave = async () => {
-    if (!user || !selectedStep || !selectedValue) return;
-
-    // Validate date is not in the future (only for regular date steps, not visa office steps)
-    if (!isVisaOfficeStep) {
-      const today = new Date().toISOString().split('T')[0];
-      if (selectedValue > today) {
-        setError('Date cannot be in the future.');
-        return;
-      }
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await supabase.rpc('delete_user');
+      await supabase.auth.signOut();
+      router.push('/');
+    } catch (err) {
+      console.error('Failed to delete account:', err);
+      setDeleting(false);
+      setShowDeleteModal(false);
+      alert('Failed to delete account. Please try again or contact support.');
     }
-
-    setSaving(true);
-    setError('');
-
-    if (isVisaOfficeStep) {
-      // Save PVO/SVO as text to profiles table (not journey_steps)
-      const fieldKey =
-        selectedStep === 'PVO (Inland)' ? 'pvo' :
-        selectedStep === 'SVO (Inland)' ? 'svo' :
-        null;
-
-      if (!fieldKey) {
-        setSaving(false);
-        setError('Unrecognised visa office step.');
-        return;
-      }
-
-      const { error: profileUpdateError } = await supabase
-        .from('profiles')
-        .update({ [fieldKey]: selectedValue, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-
-      if (profileUpdateError) {
-        setSaving(false);
-        setError('Failed to save update. Please try again.');
-        return;
-      }
-    } else {
-      // Save to journey_steps table
-      const { error: stepsError } = await supabase.from('journey_steps').upsert(
-        {
-          user_id: user.id,
-          step_name: selectedStep,
-          step_date: selectedValue,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,step_name' }
-      );
-
-      if (stepsError) {
-        setSaving(false);
-        setError('Failed to save update. Please try again.');
-        return;
-      }
-
-      // Also update application_status for backwards compatibility
-      const statusWithDate = `${selectedStep} (${selectedValue})`;
-      await supabase
-        .from('profiles')
-        .update({
-          application_status: statusWithDate,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-    }
-
-    setSaving(false);
-    setStep(4);
-    setTimeout(() => {
-      router.push('/groups');
-    }, SUCCESS_REDIRECT_DELAY);
   };
 
   if (authLoading || !displayName) {
@@ -131,149 +62,81 @@ export default function WelcomePage() {
     );
   }
 
+  const dashboardCards = [
+    { emoji: '👤', label: 'Update My Profile', href: '/profile' },
+    { emoji: '📊', label: 'Express Entry Draws', href: '/draws' },
+    { emoji: '📈', label: 'CRS Score Calculator', href: '/calculator' },
+    { emoji: '🔒', label: 'My Vault', href: '/vault' },
+    { emoji: '💬', label: 'Chat Groups', href: '/groups' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4 py-8 page-fade-in">
-      <div className="w-full max-w-md space-y-4">
-        {/* Latest Draw Card — always shown */}
-        <LatestDrawCard />
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 px-4 py-8 page-fade-in">
+      <div className="w-full max-w-md mx-auto space-y-4">
+        {/* Welcome Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
+            Welcome back, {displayName}! 🇨🇦
+          </h1>
+        </div>
 
-        {/* CRS Calculator Link */}
-        <Link
-          href="/calculator"
-          className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md shadow-red-200/50 dark:shadow-red-900/30"
-        >
-          🧮 Calculate Your CRS Score
-        </Link>
-
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg dark:shadow-slate-900/50 p-8 border border-transparent dark:border-slate-700">
-
-        {/* Step 1: Welcome + Yes/No */}
-        {step === 1 && (
-          <div className="text-center">
-            <div className="text-5xl mb-4">🇨🇦</div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">
-              Welcome back, {displayName}!
-            </h1>
-            <p className="text-gray-600 dark:text-slate-400 mb-8">
-              Is there any new update you want to share?
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setStep(2)}
-                className="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors"
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => router.push('/groups')}
-                className="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 py-3 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-              >
-                No
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Select journey step */}
-        {step === 2 && (
-          <div>
+        {/* Dashboard Cards */}
+        <div className="space-y-3">
+          {dashboardCards.map((card) => (
             <button
-              onClick={() => setStep(1)}
-              className="text-gray-400 hover:text-gray-600 mb-4 text-sm flex items-center gap-1"
+              key={card.href}
+              onClick={() => router.push(card.href)}
+              className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-xl px-4 py-4 border-l-4 border-red-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
             >
-              ← Back
+              <span className="text-2xl">{card.emoji}</span>
+              <span className="flex-1 font-semibold text-gray-800 dark:text-slate-100">{card.label}</span>
+              <span className="text-gray-400 dark:text-slate-500 text-lg">→</span>
             </button>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Which step did you complete?</h2>
-            <p className="text-gray-500 text-sm mb-6">Select the step in your PR journey</p>
-            <div className="space-y-3">
-              {JOURNEY_STEPS.map((journeyStep, index) => (
-                <button
-                  key={journeyStep}
-                  onClick={() => {
-                    setSelectedStep(journeyStep);
-                    setSelectedValue('');
-                    setStep(3);
-                  }}
-                  className="w-full text-left border border-gray-200 rounded-xl px-4 py-3 hover:border-red-400 hover:bg-red-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-400 font-medium w-5">{index + 1}.</span>
-                    <span className="font-semibold text-gray-800">{journeyStep}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Step 3: Date/office picker */}
-        {step === 3 && (
-          <div>
-            <button
-              onClick={() => setStep(2)}
-              className="text-gray-400 hover:text-gray-600 mb-4 text-sm flex items-center gap-1"
-            >
-              ← Back
-            </button>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">
-              {isVisaOfficeStep ? 'Which visa office?' : 'When did you receive this update?'}
-            </h2>
-            <p className="text-gray-500 text-sm mb-2">
-              Step: <span className="font-medium text-red-600">{selectedStep}</span>
-            </p>
-            <div className="mb-6 mt-4">
-              {isVisaOfficeStep ? (
-                <>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Visa office</label>
-                  <select
-                    value={selectedValue}
-                    onChange={(e) => setSelectedValue(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  >
-                    <option value="">Select visa office</option>
-                    {VISA_OFFICES.map((office) => (
-                      <option key={office} value={office}>{office}</option>
-                    ))}
-                  </select>
-                </>
-              ) : (
-                <>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date received</label>
-                  <input
-                    type="date"
-                    value={selectedValue}
-                    onChange={(e) => setSelectedValue(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  />
-                </>
-              )}
-            </div>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-                {error}
-              </div>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={!selectedValue || saving}
-              className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        )}
-
-        {/* Step 4: Success */}
-        {step === 4 && (
-          <div className="text-center">
-            <div className="text-5xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">Profile updated!</h2>
-            <p className="text-gray-500 dark:text-slate-400">Redirecting you to the groups...</p>
-          </div>
-        )}
+        {/* Danger Zone */}
+        <div className="mt-8 pt-6">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500 mb-3 px-1">
+            ⚠️ Danger Zone
+          </p>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-xl px-4 py-4 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
+          >
+            <span className="text-2xl">🗑️</span>
+            <span className="flex-1 font-semibold">Delete Account</span>
+          </button>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2">Delete Account</h2>
+            <p className="text-gray-600 dark:text-slate-400 mb-6 text-sm">
+              Are you sure you want to delete your account? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="flex-1 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-200 py-3 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
