@@ -106,6 +106,9 @@ export default function CategoryChat({
   // Capacitor keyboard height — used to shift layout above the software keyboard on iOS
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  // Cache the Keyboard module so the cleanup function can re-enable scroll synchronously
+  const keyboardRef = useRef<typeof import('@capacitor/keyboard').Keyboard | null>(null);
+
   const decodedCategory = decodeURIComponent(category);
   const decodedMonth = decodeURIComponent(month);
 
@@ -127,6 +130,8 @@ export default function CategoryChat({
     let hideHandle: { remove: () => Promise<void> } | null = null;
 
     import('@capacitor/keyboard').then(({ Keyboard }) => {
+      // Cache reference so the cleanup can re-enable scroll synchronously
+      keyboardRef.current = Keyboard;
       // Prevent native scroll and hide the accessory bar for cleaner iOS UX
       Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
       Keyboard.setScroll({ isDisabled: true }).catch(() => {});
@@ -147,10 +152,9 @@ export default function CategoryChat({
     });
 
     return () => {
-      // Re-enable native scroll when leaving the chat page
-      import('@capacitor/keyboard').then(({ Keyboard }) => {
-        Keyboard.setScroll({ isDisabled: false }).catch(() => {});
-      }).catch(() => {});
+      // Re-enable native scroll synchronously using the cached reference so the
+      // next page doesn't inherit a disabled-scroll WebView state
+      keyboardRef.current?.setScroll({ isDisabled: false }).catch(() => {});
       showHandle?.remove().catch(() => {});
       hideHandle?.remove().catch(() => {});
     };
@@ -484,6 +488,11 @@ export default function CategoryChat({
     setJoiningGroup(false);
   };
 
+  const navigateBackToCategory = () => {
+    keyboardRef.current?.setScroll({ isDisabled: false }).catch(() => {});
+    router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`);
+  };
+
   const handleLeaveGroup = async () => {
     if (!user) return;
 
@@ -498,7 +507,7 @@ export default function CategoryChat({
       return;
     }
 
-    router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`);
+    navigateBackToCategory();
   };
 
   const handleBlockUserFromActionSheet = async () => {
@@ -786,7 +795,7 @@ export default function CategoryChat({
             </button>
           )}
           <button
-            onClick={() => router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`)}
+            onClick={navigateBackToCategory}
             className="text-red-600 hover:text-red-700 font-medium text-sm whitespace-nowrap"
           >
             ← Back
