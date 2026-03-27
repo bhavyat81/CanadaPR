@@ -1,0 +1,162 @@
+[
+  {
+    "drawNumber": 328,
+    "date": "2025-12-11",
+    "program": "No program specified",
+    "crsScore": 524,
+    "invitations": 1000,
+    "category": "General"
+  },
+  {
+    "drawNumber": 327,
+    "date": "2025-11-27",
+    "program": "Canadian Experience Class",
+    "crsScore": 516,
+    "invitations": 4000,
+    "category": "CEC"
+  },
+  {
+    "drawNumber": 326,
+    "date": "2025-11-13",
+    "program": "No program specified",
+    "crsScore": 522,
+    "invitations": 1000,
+    "category": "General"
+  },
+  {
+    "drawNumber": 325,
+    "date": "2025-10-30",
+    "program": "Canadian Experience Class",
+    "crsScore": 514,
+    "invitations": 4000,
+    "category": "CEC"
+  },
+  {
+    "drawNumber": 324,
+    "date": "2025-10-16",
+    "program": "No program specified",
+    "crsScore": 519,
+    "invitations": 1200,
+    "category": "General"
+  },
+  {
+    "drawNumber": 323,
+    "date": "2025-10-02",
+    "program": "Provincial Nominee Program",
+    "crsScore": 691,
+    "invitations": 1000,
+    "category": "PNP"
+  },
+  {
+    "drawNumber": 322,
+    "date": "2025-09-18",
+    "program": "Canadian Experience Class",
+    "crsScore": 511,
+    "invitations": 4500,
+    "category": "CEC"
+  },
+  {
+    "drawNumber": 321,
+    "date": "2025-09-04",
+    "program": "No program specified",
+    "crsScore": 517,
+    "invitations": 1000,
+    "category": "General"
+  },
+  {
+    "drawNumber": 320,
+    "date": "2025-08-21",
+    "program": "Canadian Experience Class",
+    "crsScore": 509,
+    "invitations": 4000,
+    "category": "CEC"
+  },
+  {
+    "drawNumber": 319,
+    "date": "2025-08-07",
+    "program": "No program specified",
+    "crsScore": 515,
+    "invitations": 1200,
+    "category": "General"
+  },
+  {
+    "drawNumber": 318,
+    "date": "2025-07-24",
+    "program": "Federal Skilled Worker",
+    "crsScore": 524,
+    "invitations": 1000,
+    "category": "FSW"
+  },
+  {
+    "drawNumber": 317,
+    "date": "2025-07-10",
+    "program": "Canadian Experience Class",
+    "crsScore": 508,
+    "invitations": 4200,
+    "category": "CEC"
+  },
+  {
+    "drawNumber": 316,
+    "date": "2025-06-26",
+    "program": "No program specified",
+    "crsScore": 512,
+    "invitations": 1000,
+    "category": "General"
+  },
+  {
+    "drawNumber": 315,
+    "date": "2025-06-12",
+    "program": "Canadian Experience Class",
+    "crsScore": 506,
+    "invitations": 3800,
+    "category": "CEC"
+  },
+  {
+    "drawNumber": 314,
+    "date": "2025-05-29",
+    "program": "Provincial Nominee Program",
+    "crsScore": 695,
+    "invitations": 800,
+    "category": "PNP"
+  },
+  {
+    "drawNumber": 313,
+    "date": "2025-05-15",
+    "program": "No program specified",
+    "crsScore": 510,
+    "invitations": 1200,
+    "category": "General"
+  },
+  {
+    "drawNumber": 312,
+    "date": "2025-05-01",
+    "program": "Canadian Experience Class",
+    "crsScore": 504,
+    "invitations": 4000,
+    "category": "CEC"
+  },
+  {
+    "drawNumber": 311,
+    "date": "2025-04-17",
+    "program": "No program specified",
+    "crsScore": 508,
+    "invitations": 1000,
+    "category": "General"
+  },
+  {
+    "drawNumber": 310,
+    "date": "2025-04-03",
+    "program": "Federal Skilled Worker",
+    "crsScore": 521,
+    "invitations": 1000,
+    "category": "FSW"
+  },
+  {
+    "drawNumber": 309,
+    "date": "2025-03-20",
+    "program": "Canadian Experience Class",
+    "crsScore": 502,
+    "invitations": 4000,
+    "category": "CEC"
+  }
+]
