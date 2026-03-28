@@ -74,7 +74,12 @@ export default function LatestDrawCard() {
           <div className="bg-red-50 dark:bg-slate-700/60 rounded-xl p-3">
             <div className="text-xs text-gray-500 dark:text-slate-400 mb-0.5">👥 Invitations</div>
             <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-              {draw.DrawSize ? Number(draw.DrawSize).toLocaleString() : '—'}
+              {draw.DrawSize
+                ? (() => {
+                    const n = Number(String(draw.DrawSize).replace(/,/g, ''));
+                    return isNaN(n) ? draw.DrawSize : n.toLocaleString();
+                  })()
+                : '—'}
             </div>
           </div>
           <div className="bg-gray-50 dark:bg-slate-700/40 rounded-xl p-3">

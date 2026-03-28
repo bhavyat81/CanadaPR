@@ -175,7 +175,10 @@ export default function DrawsPage() {
                     <div>
                       <p className="text-xs text-gray-400 dark:text-slate-500">Invitations</p>
                       <p className="font-semibold text-gray-700 dark:text-slate-200">
-                        {Number(draw.drawSize).toLocaleString()}
+                        {(() => {
+                          const n = Number(String(draw.drawSize).replace(/,/g, ''));
+                          return isNaN(n) ? (draw.drawSize || 'N/A') : n.toLocaleString();
+                        })()}
                       </p>
                     </div>
                   </div>

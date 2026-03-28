@@ -1,38 +1,51 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+
+export interface VisualViewport {
+  /** Current visual viewport height in px (shrinks when iOS keyboard opens). */
+  height: number;
+  /**
+   * Distance from the top of the layout viewport to the top of the visual
+   * viewport (non-zero when the page is scrolled under a fixed keyboard).
+   */
+  offsetTop: number;
+}
 
 /**
- * Returns the current visual viewport height in pixels.
- * On iOS with Capacitor (Keyboard resize: 'none'), the visual viewport shrinks
- * when the keyboard opens, but window.innerHeight does not. Using this hook
- * lets the chat container respond to keyboard appearance by dynamically
- * adjusting its height.
+ * Returns the current visual viewport dimensions without debounce so the
+ * chat container reacts immediately when the iOS keyboard opens or closes.
  *
- * Falls back to window.innerHeight on platforms where visualViewport is unavailable.
- * Debounces updates by 50 ms to avoid layout thrashing during keyboard animation.
+ * On iOS with Capacitor (Keyboard resize: 'none'), window.innerHeight stays
+ * fixed but visualViewport.height shrinks when the keyboard appears.
+ * Tracking both height and offsetTop lets the container stay pinned in the
+ * visible area regardless of safe-area insets or keyboard state.
+ *
+ * Falls back to { height: window.innerHeight, offsetTop: 0 } on platforms
+ * where visualViewport is unavailable.
  */
-export function useVisualViewportHeight(): number {
-  const getHeight = () =>
-    typeof window !== 'undefined'
-      ? (window.visualViewport?.height ?? window.innerHeight)
-      : 0;
-
-  const [height, setHeight] = useState<number>(() =>
-    typeof window !== 'undefined' ? (window.visualViewport?.height ?? window.innerHeight) : 0
-  );
-
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+export function useVisualViewportHeight(): VisualViewport {
+  const [viewport, setViewport] = useState<VisualViewport>(() => {
+    if (typeof window === 'undefined') return { height: 0, offsetTop: 0 };
+    return {
+      height: window.visualViewport?.height ?? window.innerHeight,
+      offsetTop: window.visualViewport?.offsetTop ?? 0,
+    };
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const vv = window.visualViewport;
 
     const update = () => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setHeight(vv ? vv.height : window.innerHeight);
-      }, 50);
+      // Use requestAnimationFrame so we read the final post-layout values
+      // without introducing an artificial delay (removed the old 50 ms debounce).
+      requestAnimationFrame(() => {
+        setViewport({
+          height: vv ? vv.height : window.innerHeight,
+          offsetTop: vv ? vv.offsetTop : 0,
+        });
+      });
     };
 
     if (vv) {
@@ -42,11 +55,10 @@ export function useVisualViewportHeight(): number {
       window.addEventListener('resize', update);
     }
 
-    // Ensure we have the latest value on mount
-    setHeight(getHeight());
+    // Sync on mount in case the viewport already differs from defaults
+    update();
 
     return () => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current);
       if (vv) {
         vv.removeEventListener('resize', update);
         vv.removeEventListener('scroll', update);
@@ -56,5 +68,5 @@ export function useVisualViewportHeight(): number {
     };
   }, []);
 
-  return height;
+  return viewport;
 }
