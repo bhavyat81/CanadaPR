@@ -319,10 +319,17 @@ export default function CategoryChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Dynamically track visible viewport height so the chat container shrinks
+  // when the soft keyboard opens on iOS/Android, keeping the input always visible.
+  const [containerHeight, setContainerHeight] = useState<string>('calc(100dvh - 64px)');
+
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
     const handleResize = () => {
+      // viewport.height is the visible area above the keyboard.
+      // Subtract the 64px top navbar so the chat fills the rest.
+      setContainerHeight(`${viewport.height - 64}px`);
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
     viewport.addEventListener('resize', handleResize);
@@ -591,7 +598,7 @@ export default function CategoryChat({
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
   return (
-    <div className="flex flex-col dark:bg-slate-900" style={{ height: 'calc(100dvh - 64px)' }}>
+    <div className="flex flex-col dark:bg-slate-900" style={{ height: containerHeight }}>
       {/* Chat Header */}
       <div className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
