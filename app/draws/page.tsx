@@ -95,7 +95,7 @@ export default function DrawsPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">📊 Express Entry Draws</h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400">All rounds from IRCC open data</p>
+
           </div>
         </div>
 

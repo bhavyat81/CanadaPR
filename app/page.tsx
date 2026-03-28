@@ -62,14 +62,7 @@ export default function Home() {
               Log In
             </Link>
           </div>
-          <div className="mt-6">
-            <Link
-              href="/calculator"
-              className="inline-flex items-center gap-2 text-red-100 hover:text-white transition-colors text-sm font-medium underline underline-offset-4"
-            >
-              🧮 Calculate Your CRS Score
-            </Link>
-          </div>
+
         </div>
       </section>
 

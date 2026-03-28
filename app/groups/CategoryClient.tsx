@@ -133,7 +133,7 @@ export default function CategoryClient() {
         <div className="mb-6">
           <button
             onClick={() => router.push('/groups')}
-            className="text-red-600 hover:text-red-700 font-medium text-sm"
+            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium text-sm"
           >
             ← Back to Categories
           </button>

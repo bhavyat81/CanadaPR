@@ -15,7 +15,7 @@ export default function GroupCard({ month, displayName, memberCount, isUserGroup
 
   return (
     <div
-      className={`p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow border-2 ${
+      className={`p-6 rounded-xl shadow-md dark:shadow-slate-900/50 hover:shadow-lg transition-shadow border-2 ${
         isUserGroup
           ? 'border-red-500 dark:border-red-400 bg-red-50 dark:bg-slate-800'
           : 'border-transparent bg-white dark:bg-slate-800 hover:border-red-200 dark:hover:border-red-800'
