@@ -51,11 +51,11 @@ export default function DrawsPage() {
         if (!res.ok) throw new Error('Failed to fetch draws');
         const json = await res.json();
         const rounds: DrawRound[] = (json.rounds ?? []).map((r: Record<string, string>) => ({
-          drawNumber: r.drawNumber ?? '',
-          drawDate: r.drawDate ?? '',
-          drawName: r.drawName ?? '',
-          drawCRS: r.drawCRS ?? '',
-          drawSize: r.drawSize ?? '',
+          drawNumber: r.drawNumber ?? r.DrawNumber ?? '',
+          drawDate: r.drawDate ?? r.DrawDate ?? r.DrawDateFull ?? '',
+          drawName: r.drawName ?? r.DrawName ?? '',
+          drawCRS: r.drawCRS ?? r.DrawCRS ?? '',
+          drawSize: r.drawSize ?? r.DrawSize ?? '',
         }));
         // Sort by most recent first (drawNumber descending)
         rounds.sort((a, b) => parseInt(b.drawNumber, 10) - parseInt(a.drawNumber, 10));
