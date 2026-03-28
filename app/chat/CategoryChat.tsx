@@ -20,7 +20,8 @@ import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
 const EDIT_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-const HEADER_HEIGHT_PX = 64; // px height of the fixed top navigation bar
+/** ms to wait after the viewport stops changing before scrolling to bottom */
+const KEYBOARD_ANIMATION_SETTLE_MS = 300;
 
 interface Message {
   id: string;
@@ -56,6 +57,8 @@ export default function CategoryChat({
   const [sendError, setSendError] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Measured height of the fixed <nav> element above this component
+  const [navbarHeight, setNavbarHeight] = useState(64);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -63,17 +66,46 @@ export default function CategoryChat({
     }, 50);
   }, []);
 
-  // Track visual viewport height so the container shrinks when the iOS keyboard opens.
-  // With Capacitor Keyboard resize: 'none', window.innerHeight stays fixed but
-  // visualViewport.height shrinks — using that value as the container height keeps
-  // the chat input visible above the keyboard.
-  const viewportHeight = useVisualViewportHeight();
-
-  // Scroll to bottom whenever the viewport height changes (keyboard open/close).
+  // Measure the actual navbar height (includes safe-area-inset-top on iOS).
   useEffect(() => {
-    if (viewportHeight > 0) {
-      scrollToBottom();
+    const nav = document.querySelector('nav');
+    if (nav) setNavbarHeight(nav.offsetHeight);
+  }, []);
+
+  // Track visual viewport so the container stays above the iOS keyboard.
+  // With Capacitor Keyboard resize: 'none', window.innerHeight stays fixed but
+  // visualViewport.height shrinks — position the container with fixed insets
+  // derived from these values so the chat input is always visible.
+  const { height: viewportHeight, offsetTop: viewportOffsetTop } = useVisualViewportHeight();
+
+  // The keyboard inset is how much of window.innerHeight is hidden below
+  // the visible viewport.  When no keyboard is shown this is 0.
+  const [windowInnerHeight, setWindowInnerHeight] = useState(0);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setWindowInnerHeight(window.innerHeight);
+      const onResize = () => setWindowInnerHeight(window.innerHeight);
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
     }
+  }, []);
+  const keyboardInset =
+    windowInnerHeight > 0 && viewportHeight > 0
+      ? Math.max(0, windowInnerHeight - viewportOffsetTop - viewportHeight)
+      : 0;
+
+  // Scroll to bottom after keyboard animation settles (300 ms) instead of
+  // immediately on every viewport change to avoid jank during the animation.
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (viewportHeight <= 0) return;
+    if (scrollTimerRef.current !== null) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      scrollToBottom();
+    }, KEYBOARD_ANIMATION_SETTLE_MS);
+    return () => {
+      if (scrollTimerRef.current !== null) clearTimeout(scrollTimerRef.current);
+    };
   }, [viewportHeight, scrollToBottom]);
 
   // Admin roles state
@@ -604,8 +636,11 @@ export default function CategoryChat({
     <div
       className="flex flex-col dark:bg-slate-900"
       style={{
-        height: viewportHeight > 0 ? `${viewportHeight - HEADER_HEIGHT_PX}px` : `calc(100dvh - ${HEADER_HEIGHT_PX}px)`,
-        transition: 'height 0.25s ease-out',
+        position: 'fixed',
+        top: `${navbarHeight}px`,
+        left: 0,
+        right: 0,
+        bottom: `${keyboardInset}px`,
       }}
     >
       {/* Chat Header */}
