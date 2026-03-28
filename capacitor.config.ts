@@ -7,12 +7,14 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     iosScheme: 'https',
+    allowNavigation: ['www.canada.ca'],
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
       backgroundColor: '#DC2626',
       showSpinner: false,
+      launchAutoHide: false,
     },
     StatusBar: {
       style: 'LIGHT',
@@ -20,7 +22,7 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
     Keyboard: {
-      resize: 'none',
+      resize: 'ionic',
       resizeOnFullScreen: true,
     },
   },

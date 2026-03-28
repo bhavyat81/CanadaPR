@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchWithFallback } from '@/lib/fetchWithFallback';
 
 interface DrawRound {
   drawNumber: string;
@@ -44,30 +45,33 @@ export default function DrawsPage() {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    const fetchDraws = async () => {
-      try {
-        const res = await fetch(IRCC_DRAWS_URL);
-        if (!res.ok) throw new Error('Failed to fetch draws');
-        const json = await res.json();
-        const rounds: DrawRound[] = (json.rounds ?? []).map((r: Record<string, string>) => ({
-          drawNumber: r.drawNumber ?? '',
-          drawDate: r.drawDate ?? '',
-          drawName: r.drawName ?? '',
-          drawCRS: r.drawCRS ?? '',
-          drawSize: r.drawSize ?? '',
-        }));
-        // Sort by most recent first (drawNumber descending)
-        rounds.sort((a, b) => parseInt(b.drawNumber, 10) - parseInt(a.drawNumber, 10));
-        setDraws(rounds);
-      } catch {
-        setError('Could not load draw data. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDraws();
+  const loadDraws = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetchWithFallback(IRCC_DRAWS_URL);
+      if (!res.ok) throw new Error('Failed to fetch draws');
+      const json = await res.json();
+      const rounds: DrawRound[] = (json.rounds ?? []).map((r: Record<string, string>) => ({
+        drawNumber: r.drawNumber ?? '',
+        drawDate: r.drawDate ?? '',
+        drawName: r.drawName ?? '',
+        drawCRS: r.drawCRS ?? '',
+        drawSize: r.drawSize ?? '',
+      }));
+      // Sort by most recent first (drawNumber descending)
+      rounds.sort((a, b) => parseInt(b.drawNumber, 10) - parseInt(a.drawNumber, 10));
+      setDraws(rounds);
+    } catch {
+      setError('Could not load draw data. Check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadDraws();
+  }, [loadDraws]);
 
   const filtered = useMemo(() => {
     return draws.filter((d) => {
@@ -130,7 +134,15 @@ export default function DrawsPage() {
           <div className="text-center py-12 text-gray-500 dark:text-slate-400">Loading draws...</div>
         )}
         {error && (
-          <div className="text-center py-12 text-red-600 dark:text-red-400">{error}</div>
+          <div className="text-center py-12 space-y-3">
+            <p className="text-red-600 dark:text-red-400">{error}</p>
+            <button
+              onClick={loadDraws}
+              className="px-5 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
         )}
         {!loading && !error && filtered.length === 0 && (
           <div className="text-center py-12 text-gray-500 dark:text-slate-400">No draws found.</div>

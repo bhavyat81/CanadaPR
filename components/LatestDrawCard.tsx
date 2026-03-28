@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { fetchWithFallback } from '@/lib/fetchWithFallback';
 
 interface DrawRound {
   DrawNumber: string;
@@ -16,6 +17,8 @@ interface DrawData {
   rounds: DrawRound[];
 }
 
+const IRCC_URL = 'https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json';
+
 export default function LatestDrawCard() {
   const [draw, setDraw] = useState<DrawRound | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,10 +27,7 @@ export default function LatestDrawCard() {
   useEffect(() => {
     const fetchDraw = async () => {
       try {
-        const res = await fetch(
-          'https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json',
-          { cache: 'no-store' }
-        );
+        const res = await fetchWithFallback(IRCC_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch');
         const data: DrawData = await res.json();
         if (data?.rounds?.length > 0) {
