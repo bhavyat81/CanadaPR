@@ -14,6 +14,16 @@ export default function SwipeBackProvider({
 }) {
   const router = useRouter();
 
+  // Hide the Capacitor splash screen once the web app has mounted.
+  // The dynamic import is intentionally fire-and-forget: on web browsers
+  // (non-Capacitor), the import resolves but SplashScreen.hide() is a no-op,
+  // so errors are safely ignored.
+  useEffect(() => {
+    import('@capacitor/splash-screen')
+      .then(({ SplashScreen }) => SplashScreen.hide())
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     let touchStartX = 0;
     let touchStartY = 0;
