@@ -3,15 +3,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
+interface VaultItem {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+}
+
 interface ChatInputProps {
   onSendMessage: (content: string, imageUrl?: string) => Promise<void>;
   disabled?: boolean;
   editingMessage?: { id: string; content: string } | null;
   onCancelEdit?: () => void;
+  userId?: string;
 }
-
-// Delay (ms) to allow the iOS keyboard animation to complete before scrolling
-const KEYBOARD_SCROLL_DELAY_MS = 300;
 
 // ─── Simple CSS crop modal ─────────────────────────────────────────────────
 interface CropModalProps {
@@ -115,13 +120,78 @@ function CropModal({ src, onSend, onCancel }: CropModalProps) {
   );
 }
 
-export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit }: ChatInputProps) {
+// ─── Vault picker modal ────────────────────────────────────────────────────
+interface VaultPickerModalProps {
+  userId: string;
+  onSelect: (content: string) => void;
+  onCancel: () => void;
+}
+
+function VaultPickerModal({ userId, onSelect, onCancel }: VaultPickerModalProps) {
+  const [items, setItems] = useState<VaultItem[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`vault_items_${userId}`);
+      setItems(raw ? (JSON.parse(raw) as VaultItem[]) : []);
+    } catch {
+      setItems([]);
+    }
+  }, [userId]);
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-end z-50" onClick={onCancel}>
+      <div
+        className="bg-white dark:bg-slate-800 rounded-t-2xl w-full max-w-lg shadow-xl p-4 pb-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-gray-800 dark:text-slate-100">🔒 Upload from Vault</h3>
+          <button
+            onClick={onCancel}
+            className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 text-xl leading-none"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 dark:text-slate-500">
+            <div className="text-4xl mb-2">🔒</div>
+            <p className="text-sm">No vault items found.</p>
+            <p className="text-xs mt-1">Save items in your Vault to share them here.</p>
+          </div>
+        ) : (
+          <ul className="space-y-2 max-h-72 overflow-y-auto">
+            {items.map((item) => (
+              <li key={item.id}>
+                <button
+                  onClick={() => onSelect(item.content)}
+                  className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-gray-200 dark:border-slate-600 transition-colors"
+                >
+                  <p className="font-medium text-sm text-gray-800 dark:text-slate-100 truncate">{item.title}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 line-clamp-2">{item.content}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, userId }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [showVaultPicker, setShowVaultPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (editingMessage) {
@@ -132,10 +202,26 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     }
   }, [editingMessage]);
 
+  // Close popup when clicking outside
+  useEffect(() => {
+    if (!showPopup) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        setShowPopup(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showPopup]);
+
   const handleFocus = () => {
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }, KEYBOARD_SCROLL_DELAY_MS);
+    // Use requestAnimationFrame + delay to wait for the iOS keyboard animation
+    // to complete (~400-500 ms) before scrolling the input into view.
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 450);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,12 +263,30 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     }
   };
 
+  const handleVaultSelect = async (content: string) => {
+    setShowVaultPicker(false);
+    setSending(true);
+    try {
+      await onSendMessage(content);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const isEditing = !!editingMessage;
 
   return (
     <div>
       {cropSrc && (
         <CropModal src={cropSrc} onSend={handleCropSend} onCancel={() => { setCropSrc(null); }} />
+      )}
+
+      {showVaultPicker && userId && (
+        <VaultPickerModal
+          userId={userId}
+          onSelect={handleVaultSelect}
+          onCancel={() => setShowVaultPicker(false)}
+        />
       )}
 
       {isEditing && (
@@ -202,9 +306,9 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
         onSubmit={handleSubmit}
         className="flex items-center space-x-2 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-t border-gray-200 dark:border-slate-700"
       >
-        {/* Image picker button */}
+        {/* "+" button with popup menu */}
         {!isEditing && (
-          <>
+          <div className="relative flex-shrink-0" ref={popupRef}>
             <input
               ref={fileRef}
               type="file"
@@ -214,16 +318,40 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
             />
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
+              onClick={() => setShowPopup((v) => !v)}
               disabled={disabled || sending}
-              className="text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50 flex-shrink-0"
-              aria-label="Send image"
+              className="bg-red-600 hover:bg-red-700 text-white rounded-full w-8 h-8 flex items-center justify-center disabled:opacity-50 transition-colors flex-shrink-0 shadow-sm"
+              aria-label="Attach"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
               </svg>
             </button>
-          </>
+
+            {/* Popup menu */}
+            {showPopup && (
+              <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600 overflow-hidden min-w-[180px] z-10">
+                <button
+                  type="button"
+                  onClick={() => { setShowPopup(false); fileRef.current?.click(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <span className="text-base">📷</span>
+                  <span>Upload from Gallery</span>
+                </button>
+                <div className="h-px bg-gray-100 dark:bg-slate-700" />
+                <button
+                  type="button"
+                  onClick={() => { setShowPopup(false); setShowVaultPicker(true); }}
+                  disabled={!userId}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-40"
+                >
+                  <span className="text-base">🔒</span>
+                  <span>Upload from Vault</span>
+                </button>
+              </div>
+            )}
+          </div>
         )}
         <input
           ref={inputRef}

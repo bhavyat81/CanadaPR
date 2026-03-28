@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Returns the current visual viewport height in pixels.
@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
  * adjusting its height.
  *
  * Falls back to window.innerHeight on platforms where visualViewport is unavailable.
+ * Debounces updates by 50 ms to avoid layout thrashing during keyboard animation.
  */
 export function useVisualViewportHeight(): number {
   const getHeight = () =>
@@ -17,13 +18,22 @@ export function useVisualViewportHeight(): number {
       ? (window.visualViewport?.height ?? window.innerHeight)
       : 0;
 
-  const [height, setHeight] = useState<number>(getHeight);
+  const [height, setHeight] = useState<number>(() =>
+    typeof window !== 'undefined' ? (window.visualViewport?.height ?? window.innerHeight) : 0
+  );
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const vv = window.visualViewport;
 
-    const update = () => setHeight(vv ? vv.height : window.innerHeight);
+    const update = () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        setHeight(vv ? vv.height : window.innerHeight);
+      }, 50);
+    };
 
     if (vv) {
       vv.addEventListener('resize', update);
@@ -33,9 +43,10 @@ export function useVisualViewportHeight(): number {
     }
 
     // Ensure we have the latest value on mount
-    update();
+    setHeight(getHeight());
 
     return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
       if (vv) {
         vv.removeEventListener('resize', update);
         vv.removeEventListener('scroll', update);
