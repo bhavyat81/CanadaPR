@@ -69,6 +69,13 @@ export default function CategoryChat({
   // the chat input visible above the keyboard.
   const viewportHeight = useVisualViewportHeight();
 
+  // Scroll to bottom whenever the viewport height changes (keyboard open/close).
+  useEffect(() => {
+    if (viewportHeight > 0) {
+      scrollToBottom();
+    }
+  }, [viewportHeight, scrollToBottom]);
+
   // Admin roles state
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
   const [senderRoles, setSenderRoles] = useState<Record<string, string>>({});
@@ -743,6 +750,7 @@ export default function CategoryChat({
             onSendMessage={handleSendMessage}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
+            userId={user?.id}
           />
         ) : (
           <div className="p-4 border-t dark:border-slate-700 text-center text-gray-400 dark:text-slate-500 text-sm">Checking membership...</div>
