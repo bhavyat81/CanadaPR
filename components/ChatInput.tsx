@@ -10,7 +10,7 @@ interface ChatInputProps {
   onCancelEdit?: () => void;
 }
 
-const KEYBOARD_SCROLL_DELAY_MS = 300;
+const KEYBOARD_SCROLL_DELAY_MS = 50;
 
 // ─── Simple CSS crop modal ─────────────────────────────────────────────────
 interface CropModalProps {
@@ -131,16 +131,42 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     }
   }, [editingMessage]);
 
+  const viewportListenerRef = useRef<(() => void) | null>(null);
+
   const handleFocus = () => {
-    if (typeof window !== 'undefined' && window.visualViewport) {
-      const onViewportResize = () => {
-        window.scrollTo(0, document.body.scrollHeight);
-      };
-      window.visualViewport.addEventListener('resize', onViewportResize, { once: true });
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+
+    // Remove any previously registered listener to avoid duplicates on repeated focus
+    if (viewportListenerRef.current) {
+      window.visualViewport.removeEventListener('resize', viewportListenerRef.current);
     }
-    setTimeout(() => {
-      inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }, KEYBOARD_SCROLL_DELAY_MS);
+
+    const onViewportResize = () => {
+      const keyboardHeight = window.innerHeight - (window.visualViewport?.height ?? window.innerHeight);
+      if (formRef.current) {
+        formRef.current.style.transform = keyboardHeight > 0
+          ? `translateY(-${keyboardHeight}px)`
+          : '';
+      }
+      // Small delay to let the viewport settle before scrolling the input into view
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, KEYBOARD_SCROLL_DELAY_MS);
+    };
+
+    viewportListenerRef.current = onViewportResize;
+    window.visualViewport.addEventListener('resize', onViewportResize);
+  };
+
+  const handleBlur = () => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    if (viewportListenerRef.current) {
+      window.visualViewport.removeEventListener('resize', viewportListenerRef.current);
+      viewportListenerRef.current = null;
+    }
+    if (formRef.current) {
+      formRef.current.style.transform = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -236,6 +262,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder={isEditing ? 'Edit your message…' : 'Type a message...'}
           disabled={disabled || sending}
           autoComplete="off"

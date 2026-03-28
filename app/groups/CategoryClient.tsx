@@ -115,8 +115,8 @@ export default function CategoryClient() {
 
   if (authLoading || loadingData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading groups...</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-gray-500 dark:text-slate-400">Loading groups...</div>
       </div>
     );
   }
@@ -128,7 +128,7 @@ export default function CategoryClient() {
     : `${decodedCategory} Groups`;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 py-6 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <button
@@ -138,7 +138,7 @@ export default function CategoryClient() {
             ← Back to Categories
           </button>
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">{pageTitle}</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-6">{pageTitle}</h1>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {allMonths.map(({ value: month }) => (
             <GroupCard
