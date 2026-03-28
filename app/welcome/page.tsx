@@ -6,34 +6,46 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 
 export default function WelcomePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authError && !user) {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, authError, router]);
 
   useEffect(() => {
     if (!user) return;
 
     const loadProfile = async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', user.id)
-        .single();
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single();
 
-      if (!profile) {
-        router.push('/profile');
-        return;
+        if (error) {
+          console.error('Profile load error:', error);
+          setProfileError('Failed to load profile. Please try again.');
+          return;
+        }
+
+        if (!profile) {
+          router.push('/profile');
+          return;
+        }
+
+        setDisplayName(profile.display_name);
+      } catch (err) {
+        console.error('Profile load failed:', err);
+        setProfileError('Failed to load profile. Please try again.');
       }
-
-      setDisplayName(profile.display_name);
     };
 
     loadProfile();
@@ -53,6 +65,40 @@ export default function WelcomePage() {
       alert('Failed to delete account. Please try again or contact support.');
     }
   };
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-red-600 dark:text-red-400 font-semibold mb-2">Connection Error</p>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mb-4">{authError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-red-600 dark:text-red-400 font-semibold mb-2">Profile Error</p>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mb-4">{profileError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (authLoading || !displayName) {
     return (

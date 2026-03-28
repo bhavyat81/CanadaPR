@@ -12,7 +12,7 @@ interface CategoryCounts {
 }
 
 export default function GroupsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const router = useRouter();
   const [userCategory, setUserCategory] = useState<string | null>(null);
   const [categoryCounts, setCategoryCounts] = useState<CategoryCounts>({});
@@ -20,10 +20,10 @@ export default function GroupsPage() {
 
   // Redirect if not logged in
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authError && !user) {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, authError, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -60,6 +60,23 @@ export default function GroupsPage() {
 
     loadData();
   }, [user]);
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <p className="text-red-600 dark:text-red-400 font-semibold mb-2">Connection Error</p>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mb-4">{authError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (authLoading || loadingData) {
     return (

@@ -23,17 +23,34 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null;
-    const preferred = stored ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    setTheme(preferred);
-    document.documentElement.classList.toggle('dark', preferred === 'dark');
+    try {
+      const stored = localStorage.getItem('theme') as Theme | null;
+      const prefersDark = (() => {
+        try {
+          return window.matchMedia('(prefers-color-scheme: dark)').matches;
+        } catch (e) {
+          console.error('matchMedia unavailable:', e);
+          return false;
+        }
+      })();
+      const preferred = stored ?? (prefersDark ? 'dark' : 'light');
+      setTheme(preferred);
+      document.documentElement.classList.toggle('dark', preferred === 'dark');
+    } catch (e) {
+      // localStorage unavailable (e.g. restricted Capacitor WebView)
+      console.error('localStorage unavailable in ThemeProvider:', e);
+    }
     setMounted(true);
   }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', next);
+      try {
+        localStorage.setItem('theme', next);
+      } catch (e) {
+        console.error('localStorage unavailable:', e);
+      }
       document.documentElement.classList.toggle('dark', next === 'dark');
       return next;
     });
