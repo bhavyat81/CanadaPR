@@ -55,6 +55,29 @@ export default function CategoryChat({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+  }, []);
+
+  // Track visual viewport height to handle iOS keyboard correctly
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const onResize = () => {
+      setViewportHeight(window.visualViewport!.height);
+    };
+    onResize(); // set initial height immediately
+    window.visualViewport.addEventListener('resize', onResize);
+    window.visualViewport.addEventListener('scroll', onResize);
+    return () => {
+      window.visualViewport!.removeEventListener('resize', onResize);
+      window.visualViewport!.removeEventListener('scroll', onResize);
+    };
+  }, []);
+
   // Admin roles state
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
   const [senderRoles, setSenderRoles] = useState<Record<string, string>>({});
@@ -246,6 +269,7 @@ export default function CategoryChat({
       const msgs = data || [];
       setMessages(msgs);
       setLoadingMessages(false);
+      scrollToBottom();
 
       // Load roles for all unique senders (fire-and-forget so messages render immediately)
       const uniqueIds = [...new Set(msgs.map((m: Message) => m.sender_id))];
@@ -274,6 +298,7 @@ export default function CategoryChat({
             if (blockedIdsRef.current.has(newMsg.sender_id)) return prev;
             return [...prev, newMsg];
           });
+          scrollToBottom();
           // Load role for new sender if not yet cached
           loadSenderRoles([newMsg.sender_id]);
         }
@@ -313,21 +338,7 @@ export default function CategoryChat({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, groupKey, loadSenderRoles]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    const handleResize = () => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-    viewport.addEventListener('resize', handleResize);
-    return () => viewport.removeEventListener('resize', handleResize);
-  }, []);
+  }, [user, groupKey, loadSenderRoles, scrollToBottom]);
 
   const handleJoinGroup = async () => {
     if (!user || joiningGroup) return;
@@ -545,6 +556,7 @@ export default function CategoryChat({
     };
     setMessages((prev) => [...prev, optimisticMessage]);
     setSendError(null);
+    scrollToBottom();
 
     const insertPayload: Record<string, unknown> = {
       group_month: groupKey,
@@ -591,7 +603,10 @@ export default function CategoryChat({
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
   return (
-    <div className="flex flex-col dark:bg-slate-900" style={{ height: 'calc(100dvh - 64px)' }}>
+    <div
+      className="flex flex-col dark:bg-slate-900"
+      style={{ height: viewportHeight ? `${viewportHeight}px` : 'calc(100dvh - 64px)' }}
+    >
       {/* Chat Header */}
       <div className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-4 py-3 sm:py-4 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center gap-2">
