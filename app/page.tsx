@@ -8,14 +8,14 @@ import { useAuth } from '@/components/AuthProvider';
 import LatestDrawCard from '@/components/LatestDrawCard';
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, error: authError } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && !authError && user) {
       router.replace('/welcome');
     }
-  }, [user, loading, router]);
+  }, [user, loading, authError, router]);
 
   if (loading) {
     return (
@@ -25,12 +25,17 @@ export default function Home() {
     );
   }
 
-  if (user) {
+  if (!authError && user) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 page-fade-in">
+      {authError && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 text-center text-sm">
+          ⚠️ Connection issue: {authError}
+        </div>
+      )}
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-red-600 via-red-700 to-red-900 text-white py-24 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.08)_0%,_transparent_60%)]" />
