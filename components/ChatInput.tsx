@@ -11,6 +11,7 @@ interface ChatInputProps {
 }
 
 const KEYBOARD_SCROLL_DELAY_MS = 300;
+const KEYBOARD_SETTLE_DELAY_MS = 100;
 
 // ─── Simple CSS crop modal ─────────────────────────────────────────────────
 interface CropModalProps {
@@ -131,15 +132,33 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     }
   }, [editingMessage]);
 
+  // Keep the chat input visible when the mobile virtual keyboard opens/closes.
+  // visualViewport fires "resize" whenever the keyboard appears or dismisses on
+  // iOS/Android, giving us a reliable hook to scroll the form into view.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleViewportResize = () => {
+      if (scrollTimer !== null) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        formRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      }, KEYBOARD_SETTLE_DELAY_MS);
+    };
+
+    vv.addEventListener('resize', handleViewportResize);
+    return () => {
+      vv.removeEventListener('resize', handleViewportResize);
+      if (scrollTimer !== null) clearTimeout(scrollTimer);
+    };
+  }, []);
+
   const handleFocus = () => {
-    if (typeof window !== 'undefined' && window.visualViewport) {
-      const onViewportResize = () => {
-        window.scrollTo(0, document.body.scrollHeight);
-      };
-      window.visualViewport.addEventListener('resize', onViewportResize, { once: true });
-    }
     setTimeout(() => {
-      inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, KEYBOARD_SCROLL_DELAY_MS);
   };
 
