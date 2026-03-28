@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import LatestDrawCard from '@/components/LatestDrawCard';
 
 export default function Home() {
   const { user, loading, error: authError } = useAuth();
@@ -71,16 +70,6 @@ export default function Home() {
               🧮 Calculate Your CRS Score
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* Latest Draw Section */}
-      <section className="py-12 px-4 bg-white dark:bg-slate-800/50">
-        <div className="max-w-lg mx-auto">
-          <LatestDrawCard />
-          <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-2">
-            Data sourced from IRCC open data — updates automatically
-          </p>
         </div>
       </section>
 
