@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LatestDrawCard from '@/components/LatestDrawCard';
 
 // ─── CRS Scoring Tables ───────────────────────────────────────────────────────
 
@@ -342,6 +343,9 @@ export default function CalculatorPage() {
             </div>
           </div>
         )}
+
+        {/* Latest Draw */}
+        <LatestDrawCard />
       </div>
     </div>
   );
