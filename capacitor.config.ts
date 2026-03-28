@@ -22,8 +22,9 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
     Keyboard: {
-      resize: 'ionic',
+      resize: 'none',
       resizeOnFullScreen: true,
+      scroll: true,
     },
   },
 };

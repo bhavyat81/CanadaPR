@@ -1,26 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 
-interface VaultItem {
+interface VaultPhoto {
   id: string;
-  title: string;
-  content: string;
+  dataUrl: string;
+  name: string;
   createdAt: string;
 }
 
 export default function VaultPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [items, setItems] = useState<VaultItem[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [photos, setPhotos] = useState<VaultPhoto[]>([]);
+  const [lightboxPhoto, setLightboxPhoto] = useState<VaultPhoto | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const storageKey = user ? `vault_items_${user.id}` : null;
+  const storageKey = user ? `vault_photos_${user.id}` : null;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -32,36 +31,53 @@ export default function VaultPage() {
     if (!storageKey) return;
     try {
       const raw = localStorage.getItem(storageKey);
-      setItems(raw ? (JSON.parse(raw) as VaultItem[]) : []);
+      setPhotos(raw ? (JSON.parse(raw) as VaultPhoto[]) : []);
     } catch {
-      setItems([]);
+      setPhotos([]);
     }
   }, [storageKey]);
 
-  const saveItems = (updated: VaultItem[]) => {
-    setItems(updated);
-    if (storageKey) {
+  const savePhotos = (updated: VaultPhoto[]) => {
+    setPhotos(updated);
+    if (!storageKey) return;
+    try {
       localStorage.setItem(storageKey, JSON.stringify(updated));
+    } catch {
+      // localStorage full — notify user
+      alert('Storage full. Unable to save photo. Please delete some photos first.');
     }
   };
 
-  const handleAdd = () => {
-    if (!title.trim()) return;
-    const newItem: VaultItem = {
-      id: crypto.randomUUID(),
-      title: title.trim(),
-      content: content.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    saveItems([newItem, ...items]);
-    setTitle('');
-    setContent('');
-    setShowForm(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    e.target.value = '';
+
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise<VaultPhoto>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve({
+                id: crypto.randomUUID(),
+                dataUrl: reader.result as string,
+                name: file.name,
+                createdAt: new Date().toISOString(),
+              });
+            };
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then((newPhotos) => {
+      savePhotos([...newPhotos, ...photos]);
+    });
   };
 
   const handleDelete = (id: string) => {
-    saveItems(items.filter((item) => item.id !== id));
+    savePhotos(photos.filter((p) => p.id !== id));
     setDeleteId(null);
+    if (lightboxPhoto?.id === id) setLightboxPhoto(null);
   };
 
   if (authLoading || !user) {
@@ -87,110 +103,108 @@ export default function VaultPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">🔒 My Vault</h1>
         </div>
         <p className="text-sm text-gray-500 dark:text-slate-400">
-          Securely store your important PR documents and notes on this device.
+          Securely store your important PR document photos on this device.
         </p>
 
-        {/* Add Button */}
-        {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md shadow-red-200/50 dark:shadow-red-900/30"
-          >
-            + Add New Item
-          </button>
+        {/* Add Photo Button */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-md shadow-red-200/50 dark:shadow-red-900/30"
+        >
+          + Add Photo
+        </button>
+
+        {/* Count */}
+        {photos.length > 0 && (
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            {photos.length} {photos.length === 1 ? 'photo' : 'photos'} stored
+          </p>
         )}
 
-        {/* Add Form */}
-        {showForm && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-slate-700 space-y-3">
-            <h2 className="font-semibold text-gray-800 dark:text-slate-100">New Vault Item</h2>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title (e.g. Passport Number)"
-              className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            />
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Notes or content..."
-              rows={4}
-              className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={handleAdd}
-                disabled={!title.trim()}
-                className="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => {
-                  setShowForm(false);
-                  setTitle('');
-                  setContent('');
-                }}
-                className="flex-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 py-2.5 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Items List */}
-        {items.length === 0 && !showForm && (
+        {/* Empty state */}
+        {photos.length === 0 && (
           <div className="text-center py-16 text-gray-400 dark:text-slate-500">
-            <div className="text-4xl mb-3">🔒</div>
-            <p className="font-medium">Your vault is empty</p>
-            <p className="text-sm mt-1">Add your first item above</p>
+            <div className="text-4xl mb-3">🖼️</div>
+            <p className="font-medium">No photos yet</p>
+            <p className="text-sm mt-1">Tap &quot;+ Add Photo&quot; to pick from your gallery</p>
           </div>
         )}
 
-        <div className="space-y-3">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white dark:bg-slate-800 rounded-xl px-4 py-4 border-l-4 border-red-500 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 dark:text-slate-100 truncate">{item.title}</p>
-                  {item.content && (
-                    <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 whitespace-pre-wrap break-words">
-                      {item.content}
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+        {/* Photo Grid */}
+        {photos.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {photos.map((photo) => (
+              <div key={photo.id} className="relative group rounded-xl overflow-hidden aspect-square bg-gray-200 dark:bg-slate-700 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.dataUrl}
+                  alt={photo.name}
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={() => setLightboxPhoto(photo)}
+                />
                 <button
-                  onClick={() => setDeleteId(item.id)}
-                  className="text-gray-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
-                  aria-label="Delete"
+                  onClick={(e) => { e.stopPropagation(); setDeleteId(photo.id); }}
+                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Delete photo"
                 >
-                  🗑️
+                  ✕
                 </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <p className="text-xs text-center text-gray-400 dark:text-slate-500 pb-4">
-          Items are stored locally on this device only.
+          Your photos are stored locally on this device.
         </p>
       </div>
+
+      {/* Lightbox */}
+      {lightboxPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-50"
+          onClick={() => setLightboxPhoto(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxPhoto.dataUrl}
+            alt={lightboxPhoto.name}
+            className="max-w-full max-h-[80vh] rounded-xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="mt-4 flex items-center gap-4">
+            <p className="text-white/70 text-sm truncate max-w-[200px]">{lightboxPhoto.name}</p>
+            <button
+              onClick={(e) => { e.stopPropagation(); setDeleteId(lightboxPhoto.id); }}
+              className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-700 transition-colors"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setLightboxPhoto(null)}
+              className="bg-white/20 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-white/30 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="font-bold text-gray-800 dark:text-slate-100 text-lg mb-2">Delete Item?</h3>
+            <h3 className="font-bold text-gray-800 dark:text-slate-100 text-lg mb-2">Delete Photo?</h3>
             <p className="text-gray-500 dark:text-slate-400 text-sm mb-5">
-              This item will be permanently deleted from your vault.
+              This photo will be permanently deleted from your vault.
             </p>
             <div className="flex gap-3">
               <button
