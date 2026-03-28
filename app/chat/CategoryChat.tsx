@@ -61,15 +61,17 @@ export default function CategoryChat({
     }, 50);
   }, []);
 
-  // Track keyboard height to handle iOS keyboard correctly
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // Track visualViewport height to handle iOS keyboard correctly (Capacitor resize: 'none')
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const navbarHeight = 64;
 
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
     const onViewportChange = () => {
-      const keyboardHeight = window.innerHeight - vv.height;
-      setKeyboardHeight(Math.max(0, keyboardHeight));
+      setViewportHeight(vv.height);
+      // Scroll to bottom when the keyboard opens so the latest message stays visible
+      scrollToBottom();
     };
     vv.addEventListener('resize', onViewportChange);
     vv.addEventListener('scroll', onViewportChange);
@@ -77,7 +79,7 @@ export default function CategoryChat({
       vv.removeEventListener('resize', onViewportChange);
       vv.removeEventListener('scroll', onViewportChange);
     };
-  }, []);
+  }, [scrollToBottom]);
 
   // Admin roles state
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
@@ -607,9 +609,10 @@ export default function CategoryChat({
     <div
       className="flex flex-col dark:bg-slate-900"
       style={{
-        height: 'calc(100dvh - 64px)',
-        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
-        transition: 'padding-bottom 0.25s ease-out',
+        height: viewportHeight !== null
+          ? `${viewportHeight - navbarHeight}px`
+          : 'calc(100dvh - 64px)',
+        transition: 'height 0.25s ease-out',
       }}
     >
       {/* Chat Header */}
@@ -670,7 +673,7 @@ export default function CategoryChat({
 
       {/* Messages Area */}
       <div
-        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 bg-gray-50 dark:bg-slate-900"
+        className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-4 bg-gray-50 dark:bg-slate-900"
         style={{ touchAction: 'pan-y' }}
       >
         <div className="max-w-4xl mx-auto">
