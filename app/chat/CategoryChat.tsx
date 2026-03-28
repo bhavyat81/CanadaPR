@@ -15,10 +15,12 @@ import ReportModal from '@/components/ReportModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
+import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
 const EDIT_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const HEADER_HEIGHT_PX = 64; // px height of the fixed top navigation bar
 
 interface Message {
   id: string;
@@ -61,23 +63,11 @@ export default function CategoryChat({
     }, 50);
   }, []);
 
-  // Track keyboard height to handle iOS keyboard correctly
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const onViewportChange = () => {
-      const keyboardHeight = window.innerHeight - vv.height;
-      setKeyboardHeight(Math.max(0, keyboardHeight));
-    };
-    vv.addEventListener('resize', onViewportChange);
-    vv.addEventListener('scroll', onViewportChange);
-    return () => {
-      vv.removeEventListener('resize', onViewportChange);
-      vv.removeEventListener('scroll', onViewportChange);
-    };
-  }, []);
+  // Track visual viewport height so the container shrinks when the iOS keyboard opens.
+  // With Capacitor Keyboard resize: 'none', window.innerHeight stays fixed but
+  // visualViewport.height shrinks — using that value as the container height keeps
+  // the chat input visible above the keyboard.
+  const viewportHeight = useVisualViewportHeight();
 
   // Admin roles state
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
@@ -607,9 +597,8 @@ export default function CategoryChat({
     <div
       className="flex flex-col dark:bg-slate-900"
       style={{
-        height: 'calc(100dvh - 64px)',
-        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
-        transition: 'padding-bottom 0.25s ease-out',
+        height: viewportHeight > 0 ? `${viewportHeight - HEADER_HEIGHT_PX}px` : `calc(100dvh - ${HEADER_HEIGHT_PX}px)`,
+        transition: 'height 0.25s ease-out',
       }}
     >
       {/* Chat Header */}
