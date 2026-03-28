@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthProvider';
 
 interface ChatInputProps {
   onSendMessage: (content: string, imageUrl?: string) => Promise<void>;
@@ -115,13 +116,120 @@ function CropModal({ src, onSend, onCancel }: CropModalProps) {
   );
 }
 
+// ─── Vault image picker modal ──────────────────────────────────────────────
+interface VaultPickerProps {
+  userId: string;
+  onSelect: (url: string) => void | Promise<void>;
+  onClose: () => void;
+}
+
+function VaultPicker({ userId, onSelect, onClose }: VaultPickerProps) {
+  const [images, setImages] = useState<{ name: string; url: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const { data, error: listError } = await supabase.storage
+          .from('vault-images')
+          .list(`${userId}/`, { limit: 200 });
+
+        if (listError) throw listError;
+
+        const files = (data ?? []).filter((f) => f.name !== '.emptyFolderPlaceholder');
+
+        const signedImages = await Promise.all(
+          files.map(async (f) => {
+            const { data: urlData, error: urlError } = await supabase.storage
+              .from('vault-images')
+              .createSignedUrl(`${userId}/${f.name}`, 3600);
+            return {
+              name: f.name,
+              url: urlError || !urlData ? '' : urlData.signedUrl,
+            };
+          })
+        );
+
+        if (!cancelled) setImages(signedImages.filter((img) => img.url !== ''));
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load vault images.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-slate-800 rounded-t-2xl w-full max-w-lg p-4 pb-8 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-gray-800 dark:text-slate-100">🔒 My Vault</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors text-lg leading-none"
+            aria-label="Close vault picker"
+          >
+            ✕
+          </button>
+        </div>
+
+        {loading && (
+          <div className="text-center py-8 text-gray-500 dark:text-slate-400">Loading vault images...</div>
+        )}
+        {!loading && error && (
+          <div className="text-center py-4 text-red-500 dark:text-red-400 text-sm">{error}</div>
+        )}
+        {!loading && !error && images.length === 0 && (
+          <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+            <div className="text-3xl mb-2">📂</div>
+            <p className="text-sm">No vault images found.</p>
+            <p className="text-xs mt-1 text-gray-400 dark:text-slate-500">Upload images to your Vault first.</p>
+          </div>
+        )}
+        {!loading && images.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto">
+            {images.map((img) => (
+              <button
+                key={img.name}
+                onClick={() => { onSelect(img.url); onClose(); }}
+                className="aspect-square rounded-xl overflow-hidden border-2 border-transparent hover:border-red-500 focus:border-red-500 transition-all"
+                aria-label={`Select vault image ${img.name}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit }: ChatInputProps) {
+  const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showVaultPicker, setShowVaultPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (editingMessage) {
@@ -131,6 +239,18 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
       setMessage('');
     }
   }, [editingMessage]);
+
+  // Dismiss the attachment popup when clicking outside of it.
+  useEffect(() => {
+    if (!showAttachMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAttachMenu]);
 
   // Keep the chat input visible when the mobile virtual keyboard opens/closes.
   // visualViewport fires "resize" whenever the keyboard appears or dismisses on
@@ -209,6 +329,20 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
         <CropModal src={cropSrc} onSend={handleCropSend} onCancel={() => { setCropSrc(null); }} />
       )}
 
+      {showVaultPicker && user && (
+        <VaultPicker
+          userId={user.id}
+          onSelect={async (url) => {
+            try {
+              await onSendMessage('', url);
+            } catch (err) {
+              console.error('Failed to send vault image:', err);
+            }
+          }}
+          onClose={() => setShowVaultPicker(false)}
+        />
+      )}
+
       {isEditing && (
         <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/20 border-t border-red-100 dark:border-red-800 text-xs text-red-700 dark:text-red-300">
           <span className="flex-1">✏️ Editing message</span>
@@ -226,9 +360,9 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
         onSubmit={handleSubmit}
         className="flex items-center space-x-2 p-3 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-t border-gray-200 dark:border-slate-700"
       >
-        {/* Image picker button */}
+        {/* "+" attachment button with popup — hidden while editing */}
         {!isEditing && (
-          <>
+          <div className="relative flex-shrink-0" ref={attachMenuRef}>
             <input
               ref={fileRef}
               type="file"
@@ -236,18 +370,41 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
               className="hidden"
               onChange={handleFileChange}
             />
+            {/* "+" circle button */}
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
+              onClick={() => setShowAttachMenu((v) => !v)}
               disabled={disabled || sending}
-              className="text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50 flex-shrink-0"
-              aria-label="Send image"
+              aria-label="Attach media or vault image"
+              className="w-9 h-9 flex items-center justify-center rounded-full border-2 border-gray-300 dark:border-slate-500 text-gray-500 dark:text-slate-400 hover:border-red-500 hover:text-red-500 dark:hover:border-red-400 dark:hover:text-red-400 transition-colors disabled:opacity-50 text-xl font-light leading-none"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
-              </svg>
+              +
             </button>
-          </>
+
+            {/* Attachment popup */}
+            {showAttachMenu && (
+              <div className="absolute bottom-12 left-0 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden w-44">
+                <button
+                  type="button"
+                  onClick={() => { setShowAttachMenu(false); fileRef.current?.click(); }}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <span className="text-lg">📷</span>
+                  <span className="font-medium">Media</span>
+                </button>
+                <div className="border-t border-gray-100 dark:border-slate-700" />
+                <button
+                  type="button"
+                  onClick={() => { setShowAttachMenu(false); setShowVaultPicker(true); }}
+                  disabled={!user}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                >
+                  <span className="text-lg">🔒</span>
+                  <span className="font-medium">Vault</span>
+                </button>
+              </div>
+            )}
+          </div>
         )}
         <input
           ref={inputRef}
