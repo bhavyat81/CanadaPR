@@ -61,20 +61,21 @@ export default function CategoryChat({
     }, 50);
   }, []);
 
-  // Track visual viewport height to handle iOS keyboard correctly
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  // Track keyboard height to handle iOS keyboard correctly
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.visualViewport) return;
-    const onResize = () => {
-      setViewportHeight(window.visualViewport!.height);
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onViewportChange = () => {
+      const keyboardHeight = window.innerHeight - vv.height;
+      setKeyboardHeight(Math.max(0, keyboardHeight));
     };
-    onResize(); // set initial height immediately
-    window.visualViewport.addEventListener('resize', onResize);
-    window.visualViewport.addEventListener('scroll', onResize);
+    vv.addEventListener('resize', onViewportChange);
+    vv.addEventListener('scroll', onViewportChange);
     return () => {
-      window.visualViewport!.removeEventListener('resize', onResize);
-      window.visualViewport!.removeEventListener('scroll', onResize);
+      vv.removeEventListener('resize', onViewportChange);
+      vv.removeEventListener('scroll', onViewportChange);
     };
   }, []);
 
@@ -605,7 +606,11 @@ export default function CategoryChat({
   return (
     <div
       className="flex flex-col dark:bg-slate-900"
-      style={{ height: viewportHeight ? `${viewportHeight}px` : 'calc(100dvh - 64px)' }}
+      style={{
+        height: 'calc(100dvh - 64px)',
+        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
+        transition: 'padding-bottom 0.25s ease-out',
+      }}
     >
       {/* Chat Header */}
       <div className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-4 py-3 sm:py-4 shadow-sm">

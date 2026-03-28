@@ -134,7 +134,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
 
   const handleFocus = () => {
     setTimeout(() => {
-      inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      formRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
     }, KEYBOARD_SCROLL_DELAY_MS);
   };
 
