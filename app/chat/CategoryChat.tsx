@@ -57,22 +57,28 @@ export default function CategoryChat({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 50);
+  const scrollToBottom = useCallback((delay = 50) => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, delay);
+    });
   }, []);
 
   // Track visual viewport height so the container shrinks when the iOS keyboard opens.
   // With Capacitor Keyboard resize: 'none', window.innerHeight stays fixed but
   // visualViewport.height shrinks — using that value as the container height keeps
   // the chat input visible above the keyboard.
-  const viewportHeight = useVisualViewportHeight();
+  const { height: viewportHeight, offsetTop: viewportOffsetTop } = useVisualViewportHeight();
 
   // Scroll to bottom whenever the viewport height changes (keyboard open/close).
+  // Use a longer delay when the keyboard is opening so the layout has settled.
+  const prevViewportHeightRef = useRef<number>(viewportHeight);
   useEffect(() => {
     if (viewportHeight > 0) {
-      scrollToBottom();
+      const isKeyboardOpening = prevViewportHeightRef.current > 0 && viewportHeight < prevViewportHeightRef.current;
+      prevViewportHeightRef.current = viewportHeight;
+      scrollToBottom(isKeyboardOpening ? 300 : 50);
     }
   }, [viewportHeight, scrollToBottom]);
 
@@ -604,8 +610,15 @@ export default function CategoryChat({
     <div
       className="flex flex-col dark:bg-slate-900"
       style={{
-        height: viewportHeight > 0 ? `${viewportHeight - HEADER_HEIGHT_PX}px` : `calc(100dvh - ${HEADER_HEIGHT_PX}px)`,
-        transition: 'height 0.25s ease-out',
+        position: 'fixed',
+        top: `${HEADER_HEIGHT_PX}px`,
+        left: 0,
+        right: 0,
+        // bottom is derived from the keyboard offset so the container always
+        // sits within the visible viewport on iOS.
+        bottom: viewportHeight > 0
+          ? `${Math.max(0, window.innerHeight - (viewportHeight + viewportOffsetTop))}px`
+          : 0,
       }}
     >
       {/* Chat Header */}

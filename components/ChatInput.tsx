@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface VaultItem {
+interface VaultPhoto {
   id: string;
-  title: string;
-  content: string;
+  dataUrl: string;
+  name: string;
   createdAt: string;
 }
 
@@ -123,19 +123,19 @@ function CropModal({ src, onSend, onCancel }: CropModalProps) {
 // ─── Vault picker modal ────────────────────────────────────────────────────
 interface VaultPickerModalProps {
   userId: string;
-  onSelect: (content: string) => void;
+  onSelect: (dataUrl: string) => void;
   onCancel: () => void;
 }
 
 function VaultPickerModal({ userId, onSelect, onCancel }: VaultPickerModalProps) {
-  const [items, setItems] = useState<VaultItem[]>([]);
+  const [photos, setPhotos] = useState<VaultPhoto[]>([]);
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(`vault_items_${userId}`);
-      setItems(raw ? (JSON.parse(raw) as VaultItem[]) : []);
+      const raw = localStorage.getItem(`vault_photos_${userId}`);
+      setPhotos(raw ? (JSON.parse(raw) as VaultPhoto[]) : []);
     } catch {
-      setItems([]);
+      setPhotos([]);
     }
   }, [userId]);
 
@@ -156,26 +156,30 @@ function VaultPickerModal({ userId, onSelect, onCancel }: VaultPickerModalProps)
           </button>
         </div>
 
-        {items.length === 0 ? (
+        {photos.length === 0 ? (
           <div className="text-center py-10 text-gray-400 dark:text-slate-500">
             <div className="text-4xl mb-2">🔒</div>
-            <p className="text-sm">No vault items found.</p>
-            <p className="text-xs mt-1">Save items in your Vault to share them here.</p>
+            <p className="text-sm">No vault photos found.</p>
+            <p className="text-xs mt-1">Save photos in your Vault to share them here.</p>
           </div>
         ) : (
-          <ul className="space-y-2 max-h-72 overflow-y-auto">
-            {items.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => onSelect(item.content)}
-                  className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/20 border border-gray-200 dark:border-slate-600 transition-colors"
-                >
-                  <p className="font-medium text-sm text-gray-800 dark:text-slate-100 truncate">{item.title}</p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 line-clamp-2">{item.content}</p>
-                </button>
-              </li>
+          <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto">
+            {photos.map((photo) => (
+              <button
+                key={photo.id}
+                onClick={() => onSelect(photo.dataUrl)}
+                className="relative aspect-square overflow-hidden rounded-xl border-2 border-transparent hover:border-red-500 focus:border-red-500 transition-colors"
+                title={photo.name}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photo.dataUrl}
+                  alt={photo.name}
+                  className="w-full h-full object-cover"
+                />
+              </button>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </div>
@@ -215,13 +219,34 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
   }, [showPopup]);
 
   const handleFocus = () => {
-    // Use requestAnimationFrame + delay to wait for the iOS keyboard animation
-    // to complete (~400-500 ms) before scrolling the input into view.
-    requestAnimationFrame(() => {
+    // After the input is focused, listen for a single visualViewport resize event
+    // which fires when the iOS keyboard finishes animating up. At that point we
+    // scroll the input into the visible area.
+    const scrollOnce = () => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 100);
+      });
+      window.visualViewport?.removeEventListener('resize', scrollOnce);
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scrollOnce);
+      // Safety fallback: if the viewport never resizes (e.g. keyboard already open),
+      // scroll after a short delay anyway.
       setTimeout(() => {
+        window.visualViewport?.removeEventListener('resize', scrollOnce);
         formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }, 450);
-    });
+      }, 600);
+    } else {
+      // Non-iOS fallback
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }, 300);
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -263,11 +288,23 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     }
   };
 
-  const handleVaultSelect = async (content: string) => {
+  const handleVaultSelect = async (dataUrl: string) => {
     setShowVaultPicker(false);
     setSending(true);
     try {
-      await onSendMessage(content);
+      // Convert base64 dataUrl to Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const filename = `vault-${Date.now()}.${blob.type === 'image/png' ? 'png' : blob.type === 'image/gif' ? 'gif' : 'jpg'}`;
+      const { data, error } = await supabase.storage
+        .from('chat-images')
+        .upload(filename, blob, { contentType: blob.type || 'image/jpeg', upsert: false });
+      if (error || !data) {
+        console.error('Vault image upload failed', error);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(data.path);
+      await onSendMessage('', urlData.publicUrl);
     } finally {
       setSending(false);
     }
