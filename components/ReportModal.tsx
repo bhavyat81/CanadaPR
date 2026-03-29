@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { hapticSuccess } from '@/lib/haptics';
 
 const REPORT_REASONS = ['Spam', 'Harassment', 'Inappropriate Content', 'Hate Speech', 'Other'];
 const SUCCESS_MESSAGE_DURATION = 2000;
@@ -57,6 +58,7 @@ export default function ReportModal({
       return;
     }
 
+    hapticSuccess();
     setSubmitted(true);
     closeTimerRef.current = setTimeout(onClose, SUCCESS_MESSAGE_DURATION);
   };
@@ -67,22 +69,22 @@ export default function ReportModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4"
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         {submitted ? (
           <div className="p-6 text-center">
             <div className="text-4xl mb-3">✅</div>
-            <h3 className="text-lg font-bold text-gray-800 mb-1">Report Submitted</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-1">Report Submitted</h3>
+            <p className="text-sm text-gray-600 dark:text-slate-400">
               {"We'll review this within 24 hours. Thank you for keeping the community safe."}
             </p>
           </div>
         ) : (
           <>
-            <div className="px-6 pt-6 pb-4 border-b">
-              <h3 className="text-lg font-bold text-gray-800">Report Message</h3>
-              <p className="text-sm text-gray-500 mt-1">Why are you reporting this message?</p>
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100">Report Message</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Why are you reporting this message?</p>
             </div>
 
             <div className="px-6 py-4 space-y-2">
@@ -92,8 +94,8 @@ export default function ReportModal({
                   onClick={() => setSelectedReason(reason)}
                   className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
                     selectedReason === reason
-                      ? 'bg-red-50 border-red-400 text-red-700'
-                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                      ? 'bg-red-50 dark:bg-red-900/30 border-red-400 dark:border-red-600 text-red-700 dark:text-red-300'
+                      : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-600'
                   }`}
                 >
                   {reason}
@@ -104,7 +106,7 @@ export default function ReportModal({
             <div className="px-6 pb-6 flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                className="flex-1 py-2.5 text-sm font-medium text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-700 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               >
                 Cancel
               </button>
@@ -118,7 +120,7 @@ export default function ReportModal({
             </div>
 
             {submitError && (
-              <p className="px-6 pb-4 text-xs text-red-600 text-center">
+              <p className="px-6 pb-4 text-xs text-red-600 dark:text-red-400 text-center">
                 Could not submit report. Please check your connection and try again.
               </p>
             )}

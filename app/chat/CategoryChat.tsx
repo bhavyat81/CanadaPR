@@ -16,11 +16,14 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
-import { hapticMedium, hapticHeavy, hapticSuccess } from '@/lib/haptics';
+import { hapticMedium, hapticHeavy, hapticSuccess, hapticLight } from '@/lib/haptics';
+import { isMuted, toggleMute } from '@/lib/muteUtils';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
 const EDIT_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const SCROLL_HIGHLIGHT_COLOR = 'rgba(99,102,241,0.2)';
+const SCROLL_HIGHLIGHT_DURATION_MS = 1200;
 
 interface Message {
   id: string;
@@ -30,6 +33,9 @@ interface Message {
   content: string;
   image_url?: string;
   created_at: string;
+  // reply_to references messages.id — requires DB migration:
+  // ALTER TABLE messages ADD COLUMN reply_to uuid REFERENCES messages(id);
+  reply_to?: string | null;
 }
 
 interface Member {
@@ -58,6 +64,7 @@ export default function CategoryChat({
   const [sendError, setSendError] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefsMap = useRef<Record<string, HTMLDivElement | null>>({});
   // Measured height of the fixed <nav> element above this component
   const [navbarHeight, setNavbarHeight] = useState(64);
 
@@ -112,6 +119,15 @@ export default function CategoryChat({
   // Edit mode for own messages
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
 
+  // Swipe-to-reply state
+  const [replyingTo, setReplyingTo] = useState<{ senderName: string; content: string; messageId: string } | null>(null);
+
+  // Mute state (persisted in localStorage)
+  const [muted, setMuted] = useState(false);
+
+  // Map of messageId -> Message for reply lookups
+  const [replyMessages, setReplyMessages] = useState<Record<string, Message>>({});
+
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string;
@@ -132,6 +148,30 @@ export default function CategoryChat({
   useEffect(() => {
     blockedIdsRef.current = blockedIds;
   }, [blockedIds]);
+
+  // Load mute state from localStorage when user + groupKey are known
+  useEffect(() => {
+    if (!user) return;
+    setMuted(isMuted(user.id, groupKey));
+  }, [user, groupKey]);
+
+  const handleToggleMute = () => {
+    if (!user) return;
+    hapticLight();
+    const nowMuted = toggleMute(user.id, groupKey);
+    setMuted(nowMuted);
+  };
+
+  const scrollToMessage = useCallback((targetId: string) => {
+    const el = messageRefsMap.current[targetId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Brief highlight
+      el.style.transition = 'background-color 0.3s';
+      el.style.backgroundColor = SCROLL_HIGHLIGHT_COLOR;
+      setTimeout(() => { el.style.backgroundColor = ''; }, SCROLL_HIGHLIGHT_DURATION_MS);
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -273,7 +313,7 @@ export default function CategoryChat({
         .order('created_at', { ascending: true })
         .limit(MESSAGES_LIMIT);
 
-      const msgs = data || [];
+      const msgs: Message[] = data || [];
       setMessages(msgs);
       setLoadingMessages(false);
       scrollToBottom();
@@ -282,6 +322,21 @@ export default function CategoryChat({
       const uniqueIds = [...new Set(msgs.map((m: Message) => m.sender_id))];
       if (uniqueIds.length > 0) {
         loadSenderRoles(uniqueIds);
+      }
+
+      // Load reply-to messages that are not already in the current batch
+      const replyIds = [...new Set(msgs.map((m) => m.reply_to).filter(Boolean))] as string[];
+      const missingReplyIds = replyIds.filter((id) => !msgs.some((m) => m.id === id));
+      if (missingReplyIds.length > 0) {
+        const { data: replyData } = await supabase
+          .from('messages')
+          .select('*')
+          .in('id', missingReplyIds);
+        if (replyData) {
+          const map: Record<string, Message> = {};
+          (replyData as Message[]).forEach((m) => { map[m.id] = m; });
+          setReplyMessages(map);
+        }
       }
     };
 
@@ -556,6 +611,9 @@ export default function CategoryChat({
 
     if (!user || !userProfile) return;
 
+    const currentReplyingTo = replyingTo;
+    setReplyingTo(null);
+
     const optimisticId = `optimistic-${Date.now()}-${Math.random()}`;
     const optimisticMessage: Message = {
       id: optimisticId,
@@ -565,6 +623,7 @@ export default function CategoryChat({
       content,
       image_url: imageUrl,
       created_at: new Date().toISOString(),
+      reply_to: currentReplyingTo?.messageId ?? null,
     };
     setMessages((prev) => [...prev, optimisticMessage]);
     setSendError(null);
@@ -577,6 +636,7 @@ export default function CategoryChat({
       content,
     };
     if (imageUrl) insertPayload.image_url = imageUrl;
+    if (currentReplyingTo?.messageId) insertPayload.reply_to = currentReplyingTo.messageId;
 
     const { error, data } = await supabase
       .from('messages')
@@ -641,10 +701,23 @@ export default function CategoryChat({
           {/* Group name — centered, fills remaining space */}
           <h1 className="flex-1 text-center text-sm sm:text-base font-bold text-gray-800 dark:text-slate-100 truncate px-1">
             {displayMonth} {categoryShort}
+            {muted && <span className="ml-1 text-xs font-normal text-gray-400 dark:text-slate-500">🔇</span>}
           </h1>
 
           {/* Members count — tappable, opens dropdown */}
           <MembersPanel members={members} />
+
+          {/* Mute/unmute toggle */}
+          {isMember && (
+            <button
+              onClick={handleToggleMute}
+              title={muted ? 'Unmute group' : 'Mute group'}
+              className="text-gray-400 hover:text-yellow-500 transition-colors text-xl px-1 flex-shrink-0"
+              aria-label={muted ? 'Unmute group' : 'Mute group'}
+            >
+              {muted ? '🔔' : '🔇'}
+            </button>
+          )}
 
           {/* Leave group */}
           {isMember && (
@@ -705,34 +778,47 @@ export default function CategoryChat({
               </p>
             </div>
           ) : (
-            filteredMessages.map((msg) => (
-              <ChatMessage
-                key={msg.id}
-                messageId={msg.id}
-                senderId={msg.sender_id}
-                senderName={msg.sender_name}
-                senderRole={
-                  msg.sender_id === user?.id
-                    ? currentUserRole
-                    : (senderRoles[msg.sender_id] ?? 'member')
-                }
-                content={msg.content}
-                imageUrl={msg.image_url}
-                createdAt={msg.created_at}
-                isOwnMessage={msg.sender_id === user?.id}
-                onClickUsername={setSelectedUserId}
-                onLongPressUsername={(userId, userName, userRole) => {
-                  if (isAdmin && userId !== user?.id) {
-                    setAdminActionTarget({ userId, userName, userRole });
-                  }
-                }}
-                onLongPress={(messageId, senderId, content) => {
-                  hapticMedium();
-                  const foundMsg = messages.find((m) => m.id === messageId);
-                  setActionSheet({ messageId, senderId, content, createdAt: foundMsg?.created_at ?? new Date().toISOString() });
-                }}
-              />
-            ))
+            filteredMessages.map((msg) => {
+              // Resolve the replied-to message for display
+              const replyToMsg = msg.reply_to
+                ? (messages.find((m) => m.id === msg.reply_to) ?? replyMessages[msg.reply_to] ?? null)
+                : null;
+              return (
+                <div
+                  key={msg.id}
+                  ref={(el) => { messageRefsMap.current[msg.id] = el; }}
+                >
+                  <ChatMessage
+                    messageId={msg.id}
+                    senderId={msg.sender_id}
+                    senderName={msg.sender_name}
+                    senderRole={
+                      msg.sender_id === user?.id
+                        ? currentUserRole
+                        : (senderRoles[msg.sender_id] ?? 'member')
+                    }
+                    content={msg.content}
+                    imageUrl={msg.image_url}
+                    createdAt={msg.created_at}
+                    isOwnMessage={msg.sender_id === user?.id}
+                    replyToMessage={replyToMsg ? { messageId: replyToMsg.id, senderName: replyToMsg.sender_name, content: replyToMsg.content } : null}
+                    onReply={(msgId, name, text) => setReplyingTo({ messageId: msgId, senderName: name, content: text })}
+                    onScrollToMessage={scrollToMessage}
+                    onClickUsername={setSelectedUserId}
+                    onLongPressUsername={(userId, userName, userRole) => {
+                      if (isAdmin && userId !== user?.id) {
+                        setAdminActionTarget({ userId, userName, userRole });
+                      }
+                    }}
+                    onLongPress={(messageId, senderId, content) => {
+                      hapticMedium();
+                      const foundMsg = messages.find((m) => m.id === messageId);
+                      setActionSheet({ messageId, senderId, content, createdAt: foundMsg?.created_at ?? new Date().toISOString() });
+                    }}
+                  />
+                </div>
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -775,6 +861,8 @@ export default function CategoryChat({
             onSendMessage={handleSendMessage}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
             userId={user?.id}
             onKeyboardOpen={scrollToBottom}
           />

@@ -17,6 +17,8 @@ interface ChatInputProps {
   disabled?: boolean;
   editingMessage?: { id: string; content: string } | null;
   onCancelEdit?: () => void;
+  replyingTo?: { senderName: string; content: string; messageId: string } | null;
+  onCancelReply?: () => void;
   userId?: string;
   onKeyboardOpen?: () => void;
 }
@@ -192,7 +194,7 @@ function VaultPickerModal({ userId, onSelect, onCancel }: VaultPickerModalProps)
   );
 }
 
-export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, userId }: ChatInputProps) {
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, replyingTo, onCancelReply, userId }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -311,6 +313,22 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
           onSelect={handleVaultSelect}
           onCancel={() => setShowVaultPicker(false)}
         />
+      )}
+
+      {replyingTo && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-100 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+          <div className="flex-1 min-w-0">
+            <span className="font-semibold">{replyingTo.senderName}: </span>
+            <span className="truncate">{replyingTo.content || '📷 Image'}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onCancelReply}
+            className="font-semibold hover:text-blue-900 dark:hover:text-blue-100 flex-shrink-0"
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       {isEditing && (
