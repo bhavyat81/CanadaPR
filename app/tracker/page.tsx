@@ -48,6 +48,13 @@ interface MemberRow {
   steps: Record<string, string>;
 }
 
+interface FilledStep {
+  col: typeof TABLE_COLUMNS[number];
+  value: string;
+  days: number | null;
+  isVisaOffice: boolean;
+}
+
 export default function TrackerPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -200,9 +207,14 @@ export default function TrackerPage() {
 
   const formattedMonth = prMonth ? formatMonth(prMonth) : '';
 
+  // Sort members alphabetically by display_name (case-insensitive)
+  const sortedMembers = [...members].sort((a, b) =>
+    a.display_name.localeCompare(b.display_name, undefined, { sensitivity: 'base' })
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 py-6 px-4 page-fade-in">
-      <div className="max-w-full">
+      <div className="max-w-2xl mx-auto">
         {/* Back button */}
         <div className="mb-3">
           <button
@@ -223,91 +235,79 @@ export default function TrackerPage() {
           </p>
         </div>
 
-        {/* Scrollable table */}
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-          <table className="border-collapse text-sm" style={{ minWidth: 'max-content' }}>
-            <thead>
-              <tr className="bg-gray-100 dark:bg-slate-800">
-                <th className="sticky left-0 z-10 bg-gray-100 dark:bg-slate-800 px-4 py-3 text-left font-semibold text-gray-700 dark:text-slate-200 border-b border-r border-gray-200 dark:border-slate-700 whitespace-nowrap">
-                  Name
-                </th>
-                {TABLE_COLUMNS.map((col) => (
-                  <th
-                    key={col.step}
-                    className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-slate-200 border-b border-gray-200 dark:border-slate-700 whitespace-nowrap"
-                  >
-                    <span className="mr-1">{JOURNEY_STEP_EMOJIS[col.step]}</span>
-                    {col.header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member, idx) => {
-                // Calculate day gaps between consecutive date-based steps
-                let prevDate: string | null = null;
-                const cells = TABLE_COLUMNS.map((col) => {
-                  const isVisaOffice = VISA_OFFICE_STEPS.includes(col.step);
-                  const value = member.steps[col.step] || null;
-                  let days: number | null = null;
+        {/* Member cards */}
+        <div className="space-y-3">
+          {sortedMembers.length === 0 && (
+            <p className="text-center text-gray-400 dark:text-slate-500 py-8">
+              No members found for this month.
+            </p>
+          )}
+          {sortedMembers.map((member, idx) => {
+            // Build list of filled steps with day gaps
+            let prevDate: string | null = null;
+            const filledSteps = TABLE_COLUMNS.reduce<FilledStep[]>((acc, col) => {
+              const isVisaOffice = VISA_OFFICE_STEPS.includes(col.step);
+              const value = member.steps[col.step] || null;
+              if (!value) return acc;
 
-                  if (!isVisaOffice && value && prevDate) {
-                    const d = daysBetween(prevDate, value);
-                    if (d > 0) days = d;
-                  }
-                  if (!isVisaOffice && value) prevDate = value;
+              let days: number | null = null;
+              if (!isVisaOffice && prevDate) {
+                const d = daysBetween(prevDate, value);
+                if (d > 0) days = d;
+              }
+              if (!isVisaOffice) prevDate = value;
 
-                  return { value, days, isVisaOffice };
-                });
+              acc.push({ col, value, days, isVisaOffice });
+              return acc;
+            }, []);
 
-                const isEven = idx % 2 === 0;
-                const rowBg = isEven
-                  ? 'bg-white dark:bg-slate-900'
-                  : 'bg-gray-50 dark:bg-slate-800/50';
+            const isEven = idx % 2 === 0;
+            const cardBg = isEven
+              ? 'bg-white dark:bg-slate-900'
+              : 'bg-gray-50 dark:bg-slate-800/50';
 
-                return (
-                  <tr key={member.id} className={rowBg}>
-                    <td
-                      className={`sticky left-0 z-10 px-4 py-2.5 font-medium text-gray-800 dark:text-slate-100 border-r border-gray-200 dark:border-slate-700 whitespace-nowrap ${rowBg}`}
-                    >
-                      {member.display_name}
-                    </td>
-                    {cells.map((cell, cellIdx) => (
-                      <td
-                        key={cellIdx}
-                        className="px-3 py-2.5 text-gray-600 dark:text-slate-300 whitespace-nowrap"
-                      >
-                        {cell.value ? (
-                          <>
-                            <span>
-                              {cell.isVisaOffice ? cell.value : formatStepDate(cell.value)}
-                            </span>
-                            {cell.days !== null && (
-                              <span className="ml-1 text-xs text-gray-400 dark:text-slate-500">
-                                ({cell.days}d)
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-gray-300 dark:text-slate-600">—</span>
+            return (
+              <div
+                key={member.id}
+                className={`${cardBg} rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden`}
+              >
+                {/* Card header — member name */}
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                  <p className="font-semibold text-gray-800 dark:text-slate-100">
+                    {member.display_name}
+                  </p>
+                </div>
+
+                {/* Journey steps */}
+                {filledSteps.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-gray-400 dark:text-slate-500 italic">
+                    No milestones recorded yet
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                    {filledSteps.map(({ col, value, days, isVisaOffice }) => (
+                      <li key={col.step} className="flex items-center gap-2 px-4 py-2 text-sm">
+                        <span className="text-base w-6 text-center shrink-0">
+                          {JOURNEY_STEP_EMOJIS[col.step]}
+                        </span>
+                        <span className="flex-1 text-gray-700 dark:text-slate-300">
+                          {col.header}
+                        </span>
+                        <span className="text-gray-600 dark:text-slate-300 font-medium">
+                          {isVisaOffice ? value : formatStepDate(value)}
+                        </span>
+                        {days !== null && (
+                          <span className="text-xs text-gray-400 dark:text-slate-500">
+                            ({days}d)
+                          </span>
                         )}
-                      </td>
+                      </li>
                     ))}
-                  </tr>
-                );
-              })}
-              {members.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={TABLE_COLUMNS.length + 1}
-                    className="px-4 py-8 text-center text-gray-400 dark:text-slate-500"
-                  >
-                    No members found for this month.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

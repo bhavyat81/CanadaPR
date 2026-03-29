@@ -151,11 +151,11 @@ export default function WelcomePage() {
 
   const dashboardCards = [
     { emoji: '👤', label: 'Update My Profile', href: '/profile' },
+    { emoji: '💬', label: 'Chat Groups', href: '/groups' },
     { emoji: '📊', label: 'Express Entry Draws', href: '/draws' },
     { emoji: '📈', label: 'CRS Score Calculator', href: '/calculator' },
     { emoji: '🔒', label: 'My Vault', href: '/vault' },
     { emoji: '📊', label: 'Group Journey Tracker', href: '/tracker' },
-    { emoji: '💬', label: 'Chat Groups', href: '/groups' },
   ];
 
   return (
