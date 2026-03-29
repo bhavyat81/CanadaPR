@@ -23,7 +23,11 @@ export default function CategoryClient() {
   const [userPrMonth, setUserPrMonth] = useState<string | null>(null);
   const [userPrCategory, setUserPrCategory] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
-  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set([new Date().getFullYear()]));
+  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
+  const [hasPrApplicationDate, setHasPrApplicationDate] = useState<boolean | null>(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [savingDate, setSavingDate] = useState(false);
+  const [saveDateError, setSaveDateError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -51,6 +55,16 @@ export default function CategoryClient() {
 
       setUserPrMonth(profile?.pr_month ?? null);
       setUserPrCategory(profile?.pr_category ?? null);
+
+      // Check if user has filed PR application date
+      const { data: journeyStep } = await supabase
+        .from('journey_steps')
+        .select('step_date')
+        .eq('user_id', user.id)
+        .eq('step_name', 'Filed PR Application')
+        .maybeSingle();
+
+      setHasPrApplicationDate(!!(journeyStep?.step_date));
 
       const { data } = await supabase
         .from('group_members')
@@ -82,6 +96,21 @@ export default function CategoryClient() {
 
     loadData();
   }, [user, decodedCategory, category]);
+
+  const handleSavePrDate = async () => {
+    if (!user || !selectedDate) return;
+    setSavingDate(true);
+    setSaveDateError('');
+    const { error } = await supabase
+      .from('journey_steps')
+      .upsert({ user_id: user.id, step_name: 'Filed PR Application', step_date: selectedDate });
+    setSavingDate(false);
+    if (error) {
+      setSaveDateError('Failed to save your date. Please try again.');
+    } else {
+      setHasPrApplicationDate(true);
+    }
+  };
 
   const handleJoin = async (month: string) => {
     if (!user) return;
@@ -118,6 +147,40 @@ export default function CategoryClient() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-gray-500 dark:text-slate-400">Loading groups...</div>
+      </div>
+    );
+  }
+
+  if (!hasPrApplicationDate) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 w-full max-w-md text-center">
+          <p className="text-4xl mb-4">📋</p>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-3">One quick step before joining</h2>
+          <p className="text-gray-600 dark:text-slate-400 mb-6">
+            Before joining a group, please tell us when you submitted your PR application. This helps us show accurate PR journey data for all members.
+          </p>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2 text-left">
+            When did you submit your PR application?
+          </label>
+          <input
+            type="date"
+            value={selectedDate}
+            max={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 mb-4 bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
+          {saveDateError && (
+            <p className="text-red-600 dark:text-red-400 text-sm mb-3">{saveDateError}</p>
+          )}
+          <button
+            onClick={handleSavePrDate}
+            disabled={!selectedDate || savingDate}
+            className="w-full bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savingDate ? 'Saving...' : 'Continue'}
+          </button>
+        </div>
       </div>
     );
   }
