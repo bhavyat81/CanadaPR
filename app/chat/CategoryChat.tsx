@@ -121,10 +121,6 @@ export default function CategoryChat({
   } | null>(null);
   const loadedSenderIdsRef = useRef<Set<string>>(new Set());
 
-  // Search state
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
   // UGC safety state
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
@@ -643,9 +639,7 @@ export default function CategoryChat({
   }
 
   const visibleMessages = messages.filter((m) => !blockedIds.has(m.sender_id));
-  const filteredMessages = isSearching && searchQuery.trim()
-    ? visibleMessages.filter((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
-    : visibleMessages;
+  const filteredMessages = visibleMessages;
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
   return (
@@ -659,62 +653,38 @@ export default function CategoryChat({
         bottom: `${keyboardInset}px`,
       }}
     >
-      {/* Chat Header */}
+      {/* Chat Header — single clean line: ← | Group Name | 👥N | 🚪 */}
       <div className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 px-4 py-2 shadow-sm">
-        {/* Main header row: ← Back | Group Name | 🔍 | 🚪 */}
         <div className="max-w-4xl mx-auto flex items-center gap-2">
+          {/* Back arrow */}
           <button
             onClick={() => router.push(`/groups/category?cat=${encodeURIComponent(decodedCategory)}`)}
-            className="text-red-600 dark:text-red-400 hover:text-red-700 font-medium text-sm whitespace-nowrap flex-shrink-0"
+            className="text-red-600 dark:text-red-400 hover:text-red-700 text-xl font-bold leading-none flex-shrink-0 px-1"
+            aria-label="Back"
           >
-            ← Back
+            ←
           </button>
+
+          {/* Group name — centered, fills remaining space */}
           <h1 className="flex-1 text-center text-sm sm:text-base font-bold text-gray-800 dark:text-slate-100 truncate px-1">
             {displayMonth} {categoryShort}
           </h1>
-          {/* Search toggle */}
-          <button
-            onClick={() => { setIsSearching((v) => !v); setSearchQuery(''); }}
-            title={isSearching ? 'Close search' : 'Search messages'}
-            className="text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors text-lg px-1 flex-shrink-0"
-            aria-label="Search messages"
-          >
-            {isSearching ? '✕' : '🔍'}
-          </button>
+
+          {/* Members count — tappable, opens dropdown */}
+          <MembersPanel members={members} />
+
+          {/* Leave group */}
           {isMember && (
             <button
               onClick={() => setShowLeaveConfirm(true)}
               title="Leave group"
               className="text-gray-400 hover:text-red-500 transition-colors text-xl px-1 flex-shrink-0"
+              aria-label="Leave group"
             >
               🚪
             </button>
           )}
         </div>
-
-        {/* Members row below */}
-        <div className="max-w-4xl mx-auto mt-1">
-          <MembersPanel members={members} />
-        </div>
-
-        {/* Search bar */}
-        {isSearching && (
-          <div className="max-w-4xl mx-auto mt-2">
-            <input
-              autoFocus
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search messages…"
-              className="w-full border border-gray-300 dark:border-slate-600 rounded-full px-4 py-2 text-sm text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-            />
-            {searchQuery.trim() && (
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 px-2">
-                {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''} found
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Leave Group Confirmation Modal */}
@@ -755,12 +725,10 @@ export default function CategoryChat({
             <div className="text-center py-16">
               <div className="text-5xl mb-4">💬</div>
               <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300">
-                {isSearching && searchQuery.trim() ? 'No messages match your search' : 'No messages yet'}
+                No messages yet
               </h3>
               <p className="text-gray-500 dark:text-slate-400 mt-2">
-                {isSearching && searchQuery.trim()
-                  ? 'Try a different search term.'
-                  : `Be the first to say hello to the ${displayMonth} ${categoryShort} group!`}
+                {`Be the first to say hello to the ${displayMonth} ${categoryShort} group!`}
               </p>
             </div>
           ) : (
@@ -835,6 +803,7 @@ export default function CategoryChat({
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
             userId={user?.id}
+            onKeyboardOpen={scrollToBottom}
           />
         ) : (
           <div className="p-4 border-t dark:border-slate-700 text-center text-gray-400 dark:text-slate-500 text-sm">Checking membership...</div>

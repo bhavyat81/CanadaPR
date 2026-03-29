@@ -26,10 +26,10 @@ export default function MembersPanel({ members }: MembersPanelProps) {
       <div className="relative">
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 border border-red-300 dark:border-red-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
+          className="text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1 flex-shrink-0"
+          aria-label="Members"
         >
-          👥 Members ({members.length})
-          <span className="text-xs">{expanded ? '▲' : '▼'}</span>
+          👥 {members.length}
         </button>
 
         {expanded && (
