@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
@@ -53,6 +53,7 @@ export default function WelcomePage() {
   const [deleting, setDeleting] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [shareToast, setShareToast] = useState(false);
+  const pushInitRef = useRef(false);
 
   useEffect(() => {
     if (!authLoading && !authError && !user) {
@@ -83,8 +84,11 @@ export default function WelcomePage() {
         }
 
         setDisplayName(profile.display_name);
-        // Initialize push notifications now that user is logged in
-        initPushNotifications(user.id);
+        // Initialize push notifications only once
+        if (!pushInitRef.current) {
+          pushInitRef.current = true;
+          initPushNotifications(user.id);
+        }
       } catch (err) {
         console.error('Profile load failed:', err);
         setProfileError('Failed to load profile. Please try again.');
