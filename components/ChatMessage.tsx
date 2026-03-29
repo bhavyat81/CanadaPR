@@ -99,7 +99,7 @@ export default function ChatMessage({
   };
 
   const avatarEl = (
-    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center text-sm flex-shrink-0 select-none">
+    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center text-sm flex-shrink-0 self-end" aria-label="User avatar">
       👤
     </div>
   );
@@ -122,30 +122,33 @@ export default function ChatMessage({
         </div>
       )}
 
-      <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-3`}>
-        {/* Avatar + name row */}
-        <div className={`flex items-center gap-1.5 mb-0.5 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-          {avatarEl}
-          <button
-            className={`text-xs font-semibold hover:underline focus:outline-none ${
-              isOwnMessage ? 'text-red-600 dark:text-red-400 text-right' : 'text-blue-600 dark:text-blue-400 text-left'
-            }`}
-            onClick={handleUsernameClick}
-            onTouchStart={handleUsernameTouchStart}
-            onTouchEnd={cancelUsernameLongPress}
-            onTouchMove={cancelUsernameLongPress}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              onLongPressUsername?.(senderId, senderName, senderRole);
-            }}
-          >
-            {displayName}
-          </button>
-        </div>
+      <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-3`}>
+        {/* Avatar on the left for other people's messages */}
+        {!isOwnMessage && (
+          <div className="mr-2 flex-shrink-0">{avatarEl}</div>
+        )}
 
-        <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} relative`}>
+        {/* Bubble column — max 75% width mirrors WhatsApp/iMessage convention */}
+        <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[75%]`}>
+          {/* Sender name above bubble (only for others) */}
+          {!isOwnMessage && (
+            <button
+              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline focus:outline-none mb-0.5 text-left"
+              onClick={handleUsernameClick}
+              onTouchStart={handleUsernameTouchStart}
+              onTouchEnd={cancelUsernameLongPress}
+              onTouchMove={cancelUsernameLongPress}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onLongPressUsername?.(senderId, senderName, senderRole);
+              }}
+            >
+              {displayName}
+            </button>
+          )}
+
           <div
-            className={`max-w-[75%] rounded-2xl shadow-sm cursor-pointer select-none ${
+            className={`rounded-2xl shadow-sm cursor-pointer select-none ${
               isOwnMessage
                 ? 'bg-red-600 dark:bg-red-900 text-white rounded-br-none'
                 : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100 rounded-bl-none'
@@ -182,9 +185,7 @@ export default function ChatMessage({
             {content && <p className="text-sm">{content}</p>}
           </div>
 
-          <div className={`flex items-center gap-1.5 mt-1 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
-            <span className="text-xs text-gray-400 dark:text-slate-500">{formattedTime}</span>
-          </div>
+          <span className="text-xs text-gray-400 dark:text-slate-500 mt-1">{formattedTime}</span>
         </div>
       </div>
     </>

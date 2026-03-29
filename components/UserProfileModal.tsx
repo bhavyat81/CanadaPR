@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 import { formatMonth } from '@/lib/months';
 import { getCategoryLabel } from '@/lib/categories';
 import StatusTimeline, { JourneyStep } from './StatusTimeline';
-import { getDefaultAvatar } from '@/lib/avatars';
 
 const BLOCK_SUCCESS_DISPLAY_DURATION = 1500;
 
@@ -14,7 +13,6 @@ interface UserProfile {
   pr_month: string | null;
   pr_category: string | null;
   application_status: string | null;
-  avatar_emoji: string | null;
 }
 
 interface UserProfileModalProps {
@@ -56,7 +54,7 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
       const [profileResult, stepsResult] = await Promise.all([
         supabase
           .from('profiles')
-          .select('display_name, pr_month, pr_category, application_status, avatar_emoji')
+          .select('display_name, pr_month, pr_category, application_status')
           .eq('id', userId)
           .single(),
         supabase
@@ -134,10 +132,8 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
       >
         {/* Avatar */}
         <div className="text-center mb-3">
-          <div className="text-5xl">
-            {loading
-              ? '👤'
-              : (profile?.avatar_emoji ?? getDefaultAvatar(userId))}
+          <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center text-3xl mx-auto">
+            👤
           </div>
         </div>
 
