@@ -6,6 +6,43 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { initPushNotifications } from '@/lib/pushNotifications';
 
+const HOW_TO_STEPS = [
+  {
+    title: '1. Set Up Your Profile',
+    body: 'Go to "Update My Profile" → set your display name, PR application month, PR category, and fill in your journey milestones as they happen.',
+  },
+  {
+    title: '2. Journey Step Abbreviations',
+    items: [
+      { abbr: 'Filed PR Application', desc: 'Date you submitted your PR application' },
+      { abbr: 'Waiting AOR', desc: 'Period waiting for Acknowledgement of Receipt' },
+      { abbr: 'Received AOR', desc: 'Date you received your AOR' },
+      { abbr: 'AOR', desc: 'Acknowledgement of Receipt' },
+      { abbr: 'BIL', desc: 'Biometrics Instruction Letter' },
+      { abbr: 'ADR', desc: 'Additional Document Request' },
+      { abbr: 'PVO', desc: 'Primary Visa Office (Inland)' },
+      { abbr: 'SVO', desc: 'Secondary Visa Office (Inland)' },
+      { abbr: 'PAL', desc: 'Port of Entry Authorization Letter (also called Port of Landing)' },
+      { abbr: 'PPR', desc: 'Passport Request' },
+      { abbr: 'ECOPR', desc: 'Electronic Confirmation of Permanent Residence' },
+      { abbr: 'P1', desc: 'Portal 1 (first IRCC portal update)' },
+      { abbr: 'P2', desc: 'Portal 2 (second IRCC portal update)' },
+    ],
+  },
+  {
+    title: '3. Join Chat Groups',
+    body: 'Go to "Chat Groups" → pick your PR category → join your application month\'s group to chat with others at the same stage.',
+  },
+  {
+    title: '4. View Member Progress',
+    body: 'In any chat group, tap on a member\'s username to see their current PR journey steps and dates.',
+  },
+  {
+    title: '5. Group Journey Tracker',
+    body: 'Use "Group Journey Tracker" from the home page to see a merged table of all members in your PR month group showing each person\'s journey step dates and day counts between steps.',
+  },
+];
+
 export default function WelcomePage() {
   const { user, loading: authLoading, error: authError } = useAuth();
   const router = useRouter();
@@ -13,6 +50,7 @@ export default function WelcomePage() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !authError && !user) {
@@ -116,6 +154,7 @@ export default function WelcomePage() {
     { emoji: '📊', label: 'Express Entry Draws', href: '/draws' },
     { emoji: '📈', label: 'CRS Score Calculator', href: '/calculator' },
     { emoji: '🔒', label: 'My Vault', href: '/vault' },
+    { emoji: '📊', label: 'Group Journey Tracker', href: '/tracker' },
     { emoji: '💬', label: 'Chat Groups', href: '/groups' },
   ];
 
@@ -142,6 +181,41 @@ export default function WelcomePage() {
               <span className="text-gray-400 dark:text-slate-500 text-lg">→</span>
             </button>
           ))}
+        </div>
+
+        {/* How to Use This App */}
+        <div className="mt-2">
+          <button
+            onClick={() => setShowGuide((v) => !v)}
+            className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-xl px-4 py-4 border-l-4 border-blue-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
+          >
+            <span className="text-2xl">📖</span>
+            <span className="flex-1 font-semibold text-gray-800 dark:text-slate-100">How to Use This App</span>
+            <span className="text-gray-400 dark:text-slate-500 text-lg">{showGuide ? '▲' : '▼'}</span>
+          </button>
+
+          {showGuide && (
+            <div className="bg-white dark:bg-slate-800 rounded-b-xl border border-t-0 border-gray-200 dark:border-slate-700 px-4 pb-5 pt-4 space-y-4 text-sm text-gray-700 dark:text-slate-300">
+              {HOW_TO_STEPS.map((step) => (
+                <div key={step.title}>
+                  <p className="font-semibold text-gray-800 dark:text-slate-100 mb-1">{step.title}</p>
+                  {'body' in step && step.body && (
+                    <p className="text-gray-600 dark:text-slate-400">{step.body}</p>
+                  )}
+                  {'items' in step && step.items && (
+                    <ul className="space-y-1 mt-1">
+                      {step.items.map((item) => (
+                        <li key={item.abbr} className="flex gap-2">
+                          <span className="font-medium text-gray-800 dark:text-slate-200 shrink-0">{item.abbr}</span>
+                          <span className="text-gray-500 dark:text-slate-400">— {item.desc}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Danger Zone */}
