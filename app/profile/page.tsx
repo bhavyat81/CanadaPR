@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { generateMonths } from '@/lib/months';
-import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, VISA_OFFICE_STEPS, VISA_OFFICES, formatStepDate } from '@/lib/categories';
+import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, VISA_OFFICE_STEPS, VISA_OFFICES, formatStepDate, daysSince } from '@/lib/categories';
 import { hapticSuccess, hapticError } from '@/lib/haptics';
 
 const PR_MONTHS = generateMonths();
@@ -275,39 +275,46 @@ export default function ProfilePage() {
                       </span>
                     </button>
                     {activeStep === step && (
-                      <div className="px-4 pb-3 pt-1 flex items-center gap-2 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700">
-                        {isVisaOfficeStep ? (
-                          <select
-                            value={stepDates[step] || ''}
-                            onChange={(e) => handleStepDate(step, e.target.value)}
-                            autoFocus
-                            className="flex-1 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                          >
-                            <option value="">Select visa office</option>
-                            {VISA_OFFICES.map((office) => (
-                              <option key={office} value={office}>{office}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            type="date"
-                            value={stepDates[step] || ''}
-                            onChange={(e) => handleStepDate(step, e.target.value)}
-                            autoFocus
-                            className="flex-1 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                          />
+                      <>
+                        <div className="px-4 pb-3 pt-1 flex items-center gap-2 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700">
+                          {isVisaOfficeStep ? (
+                            <select
+                              value={stepDates[step] || ''}
+                              onChange={(e) => handleStepDate(step, e.target.value)}
+                              autoFocus
+                              className="flex-1 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            >
+                              <option value="">Select visa office</option>
+                              {VISA_OFFICES.map((office) => (
+                                <option key={office} value={office}>{office}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="date"
+                              value={stepDates[step] || ''}
+                              onChange={(e) => handleStepDate(step, e.target.value)}
+                              autoFocus
+                              className="flex-1 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            />
+                          )}
+                          {stepDates[step] && (
+                            <button
+                              type="button"
+                              onClick={() => handleStepDate(step, '')}
+                              className="text-gray-400 hover:text-red-500 text-sm"
+                              aria-label={`Clear ${step}`}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                        {step === 'Waiting AOR' && stepDates['Filed PR Application'] && (
+                          <div className="px-4 pb-3 text-xs text-orange-500 dark:text-orange-400">
+                            ⏳ {daysSince(stepDates['Filed PR Application'])} days since filing
+                          </div>
                         )}
-                        {stepDates[step] && (
-                          <button
-                            type="button"
-                            onClick={() => handleStepDate(step, '')}
-                            className="text-gray-400 hover:text-red-500 text-sm"
-                            aria-label={`Clear ${step}`}
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
+                      </>
                     )}
                   </div>
                 );

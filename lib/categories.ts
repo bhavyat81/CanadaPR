@@ -118,6 +118,9 @@ export const VISA_OFFICES: string[] = [
 
 // --- Journey Steps ---
 export const JOURNEY_STEPS: string[] = [
+  "Filed PR Application",
+  "Waiting AOR",
+  "Received AOR",
   "AOR",
   "BIL Date",
   "ADR (If Any) / Return Date",
@@ -139,6 +142,9 @@ export const JOURNEY_STEPS: string[] = [
 ];
 
 export const JOURNEY_STEP_EMOJIS: Record<string, string> = {
+  "Filed PR Application": "📝",
+  "Waiting AOR": "⏳",
+  "Received AOR": "📬",
   "AOR": "📄",
   "BIL Date": "📋",
   "ADR (If Any) / Return Date": "📎",
@@ -172,6 +178,13 @@ export function getCategoryShortLabel(category: string): string {
 export function getCategoryLabel(category: string): string {
   const cat = PR_CATEGORIES.find((c) => c.value === category);
   return cat?.label ?? category;
+}
+
+/** Calculate the number of full days from a "YYYY-MM-DD" date string to today. */
+export function daysSince(dateStr: string): number {
+  const filed = new Date(dateStr);
+  const today = new Date();
+  return Math.floor((today.getTime() - filed.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 /** Format a date string from "YYYY-MM-DD" to "dd.mm.yyyy". Returns the input unchanged for unrecognised formats. */
