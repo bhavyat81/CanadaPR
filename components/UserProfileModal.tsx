@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { formatMonth } from '@/lib/months';
 import { getCategoryLabel } from '@/lib/categories';
 import StatusTimeline, { JourneyStep } from './StatusTimeline';
+import { getDefaultAvatar } from '@/lib/avatars';
 
 const BLOCK_SUCCESS_DISPLAY_DURATION = 1500;
 
@@ -13,6 +14,7 @@ interface UserProfile {
   pr_month: string | null;
   pr_category: string | null;
   application_status: string | null;
+  avatar_emoji: string | null;
 }
 
 interface UserProfileModalProps {
@@ -54,7 +56,7 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
       const [profileResult, stepsResult] = await Promise.all([
         supabase
           .from('profiles')
-          .select('display_name, pr_month, pr_category, application_status')
+          .select('display_name, pr_month, pr_category, application_status, avatar_emoji')
           .eq('id', userId)
           .single(),
         supabase
@@ -127,27 +129,36 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Avatar */}
+        <div className="text-center mb-3">
+          <div className="text-5xl">
+            {loading
+              ? '👤'
+              : (profile?.avatar_emoji ?? getDefaultAvatar(userId))}
+          </div>
+        </div>
+
         <div className="flex items-start justify-between mb-4">
           <div className="min-w-0 flex-1">
             {loading ? (
-              <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-32 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
             ) : (
               <>
-                <h2 className="text-lg font-bold text-gray-800 truncate">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 truncate">
                   @{profile?.display_name ?? 'Unknown User'}&apos;s PR Journey
                 </h2>
                 {categoryLabel && (
-                  <p className="text-sm text-gray-500 mt-0.5">{categoryLabel}</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{categoryLabel}</p>
                 )}
               </>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none ml-4"
+            className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 text-xl leading-none ml-4"
             aria-label="Close"
           >
             ✕
@@ -158,18 +169,18 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
           <div className="flex flex-col gap-3 mt-2">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="h-5 w-5 rounded-full bg-gray-200 animate-pulse" />
-                <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
+                <div className="h-5 w-5 rounded-full bg-gray-200 dark:bg-slate-700 animate-pulse" />
+                <div className="h-4 w-36 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
               </div>
             ))}
           </div>
         ) : error ? (
-          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         ) : (
           <>
             {profile?.pr_month && (
-              <p className="text-sm text-gray-600 mb-3">
-                <span className="font-medium text-gray-700">Application Month:</span>{' '}
+              <p className="text-sm text-gray-600 dark:text-slate-400 mb-3">
+                <span className="font-medium text-gray-700 dark:text-slate-300">Application Month:</span>{' '}
                 {formatMonth(profile.pr_month)}
               </p>
             )}
@@ -179,9 +190,9 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
             />
 
             {currentUserId && currentUserId !== userId && (
-              <div className="mt-5 pt-4 border-t">
+              <div className="mt-5 pt-4 border-t dark:border-slate-700">
                 {blocked ? (
-                  <p className="text-sm text-center text-gray-500">
+                  <p className="text-sm text-center text-gray-500 dark:text-slate-400">
                     ✅ User blocked. Their messages will no longer be visible to you.
                   </p>
                 ) : (
@@ -189,12 +200,12 @@ export default function UserProfileModal({ userId, isOpen, onClose, currentUserI
                     <button
                       onClick={handleBlockUser}
                       disabled={blocking}
-                      className="w-full py-2.5 text-sm font-semibold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-40"
+                      className="w-full py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
                     >
                       {blocking ? 'Blocking...' : '🚫 Block User'}
                     </button>
                     {blockError && (
-                      <p className="mt-2 text-xs text-red-600 text-center">
+                      <p className="mt-2 text-xs text-red-600 dark:text-red-400 text-center">
                         Could not block user. Please try again.
                       </p>
                     )}

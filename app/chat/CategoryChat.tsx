@@ -16,6 +16,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
 import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
+import { getDefaultAvatar } from '@/lib/avatars';
+import { hapticLight, hapticMedium, hapticHeavy, hapticSuccess } from '@/lib/haptics';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
@@ -36,7 +38,18 @@ interface Message {
 interface Member {
   id: string;
   display_name: string;
+  avatar_emoji?: string;
 }
+
+interface ReactionRow {
+  message_id: string;
+  user_id: string;
+  emoji: string;
+}
+
+type ReactionsMap = Record<string, ReactionRow[]>;
+
+type ProfileData = { id: string; display_name: string; avatar_emoji: string | null };
 
 export default function CategoryChat({
   category,
@@ -111,12 +124,20 @@ export default function CategoryChat({
   // Admin roles state
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
   const [senderRoles, setSenderRoles] = useState<Record<string, string>>({});
+  const [senderAvatars, setSenderAvatars] = useState<Record<string, string>>({});
   const [adminActionTarget, setAdminActionTarget] = useState<{
     userId: string;
     userName: string;
     userRole: string;
   } | null>(null);
   const loadedSenderIdsRef = useRef<Set<string>>(new Set());
+
+  // Reactions state
+  const [reactionsMap, setReactionsMap] = useState<ReactionsMap>({});
+
+  // Search state
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // UGC safety state
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
@@ -225,7 +246,7 @@ export default function CategoryChat({
       });
   }, [user]);
 
-  // Load roles for a list of sender IDs (skips already-loaded ones)
+  // Load roles and avatars for a list of sender IDs (skips already-loaded ones)
   const loadSenderRoles = useCallback(async (senderIds: string[]) => {
     const unloaded = senderIds.filter((id) => !loadedSenderIdsRef.current.has(id));
     if (unloaded.length === 0) return;
@@ -233,14 +254,21 @@ export default function CategoryChat({
 
     const { data } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, avatar_emoji')
       .in('id', unloaded);
 
     if (data) {
       setSenderRoles((prev) => {
         const next = { ...prev };
-        (data as Array<{ id: string; role: string | null }>).forEach((p) => {
+        (data as Array<{ id: string; role: string | null; avatar_emoji: string | null }>).forEach((p) => {
           next[p.id] = p.role ?? 'member';
+        });
+        return next;
+      });
+      setSenderAvatars((prev) => {
+        const next = { ...prev };
+        (data as Array<{ id: string; role: string | null; avatar_emoji: string | null }>).forEach((p) => {
+          next[p.id] = p.avatar_emoji ?? getDefaultAvatar(p.id);
         });
         return next;
       });
@@ -251,7 +279,7 @@ export default function CategoryChat({
     if (!user) return;
 
     interface GroupMemberRow {
-      profiles: { id: string; display_name: string } | { id: string; display_name: string }[] | null;
+      profiles: ProfileData | ProfileData[] | null;
     }
 
     const loadMembership = async () => {
@@ -266,7 +294,7 @@ export default function CategoryChat({
 
       const { data: groupMemberRows } = await supabase
         .from('group_members')
-        .select('profiles(id, display_name)')
+        .select('profiles(id, display_name, avatar_emoji)')
         .eq('group_key', groupKey);
 
       if (groupMemberRows) {
@@ -276,7 +304,8 @@ export default function CategoryChat({
             if (!p) return [];
             return Array.isArray(p) ? p : [p];
           })
-          .filter((p): p is Member => !!p && !!p.display_name);
+          .filter((p): p is ProfileData => !!p && !!p.display_name)
+          .map((p) => ({ id: p.id, display_name: p.display_name, avatar_emoji: p.avatar_emoji ?? undefined }));
         setMembers(memberList);
       }
     };
@@ -301,10 +330,27 @@ export default function CategoryChat({
       setLoadingMessages(false);
       scrollToBottom();
 
-      // Load roles for all unique senders (fire-and-forget so messages render immediately)
+      // Load roles and avatars for all unique senders (fire-and-forget so messages render immediately)
       const uniqueIds = [...new Set(msgs.map((m: Message) => m.sender_id))];
       if (uniqueIds.length > 0) {
         loadSenderRoles(uniqueIds);
+      }
+
+      // Load reactions for all loaded messages
+      if (msgs.length > 0) {
+        const messageIds = msgs.map((m: Message) => m.id);
+        const { data: reactionData } = await supabase
+          .from('message_reactions')
+          .select('message_id, user_id, emoji')
+          .in('message_id', messageIds);
+        if (reactionData) {
+          const map: ReactionsMap = {};
+          (reactionData as ReactionRow[]).forEach((r) => {
+            if (!map[r.message_id]) map[r.message_id] = [];
+            map[r.message_id].push(r);
+          });
+          setReactionsMap(map);
+        }
       }
     };
 
@@ -363,6 +409,32 @@ export default function CategoryChat({
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'message_reactions' },
+        (payload) => {
+          const r = payload.new as ReactionRow;
+          setReactionsMap((prev) => {
+            const existing = prev[r.message_id] ?? [];
+            if (existing.some((x) => x.user_id === r.user_id && x.emoji === r.emoji)) return prev;
+            return { ...prev, [r.message_id]: [...existing, r] };
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'message_reactions' },
+        (payload) => {
+          const r = payload.old as ReactionRow;
+          setReactionsMap((prev) => {
+            const existing = prev[r.message_id] ?? [];
+            return {
+              ...prev,
+              [r.message_id]: existing.filter((x) => !(x.user_id === r.user_id && x.emoji === r.emoji)),
+            };
+          });
+        }
+      )
       .subscribe();
 
     return () => {
@@ -384,6 +456,7 @@ export default function CategoryChat({
       return;
     }
 
+    hapticSuccess();
     setIsMember(true);
     if (userProfile) {
       setMembers((prev) => {
@@ -397,6 +470,7 @@ export default function CategoryChat({
   const handleLeaveGroup = async () => {
     if (!user) return;
 
+    hapticMedium();
     const { error } = await supabase
       .from('group_members')
       .delete()
@@ -423,6 +497,7 @@ export default function CategoryChat({
       confirmLabel: 'Block',
       onConfirm: async () => {
         setConfirmDialog(null);
+        hapticHeavy();
         const { error: blockError } = await supabase.from('blocks').insert({
           blocker_id: user.id,
           blocked_id: targetId,
@@ -460,6 +535,7 @@ export default function CategoryChat({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         setConfirmDialog(null);
+        hapticHeavy();
         const { error } = await supabase.rpc('admin_delete_message', {
           message_id_param: messageId,
         });
@@ -482,6 +558,7 @@ export default function CategoryChat({
       confirmLabel: 'Delete',
       onConfirm: async () => {
         setConfirmDialog(null);
+        hapticHeavy();
         const { error } = await supabase
           .from('messages')
           .delete()
@@ -565,6 +642,41 @@ export default function CategoryChat({
     setSenderRoles((prev) => ({ ...prev, [targetUserId]: 'member' }));
   };
 
+  // Handle emoji reactions
+  const handleReact = async (messageId: string, emoji: string) => {
+    if (!user) return;
+    hapticLight();
+    const existing = reactionsMap[messageId] ?? [];
+    const alreadyReacted = existing.some((r) => r.user_id === user.id && r.emoji === emoji);
+
+    if (alreadyReacted) {
+      await supabase
+        .from('message_reactions')
+        .delete()
+        .eq('message_id', messageId)
+        .eq('user_id', user.id)
+        .eq('emoji', emoji);
+      setReactionsMap((prev) => ({
+        ...prev,
+        [messageId]: (prev[messageId] ?? []).filter(
+          (r) => !(r.user_id === user.id && r.emoji === emoji)
+        ),
+      }));
+    } else {
+      const { data } = await supabase
+        .from('message_reactions')
+        .insert({ message_id: messageId, user_id: user.id, emoji })
+        .select()
+        .single();
+      if (data) {
+        setReactionsMap((prev) => ({
+          ...prev,
+          [messageId]: [...(prev[messageId] ?? []), data as ReactionRow],
+        }));
+      }
+    }
+  };
+
   const handleSendMessage = async (content: string, imageUrl?: string) => {
     // If in edit mode, route to update handler instead
     if (editingMessage) {
@@ -630,6 +742,9 @@ export default function CategoryChat({
   }
 
   const visibleMessages = messages.filter((m) => !blockedIds.has(m.sender_id));
+  const filteredMessages = isSearching && searchQuery.trim()
+    ? visibleMessages.filter((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    : visibleMessages;
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'creator_admin';
 
   return (
@@ -654,6 +769,15 @@ export default function CategoryChat({
               {categoryShort} · {decodedMonth} applicants
             </p>
           </div>
+          {/* Search toggle */}
+          <button
+            onClick={() => { setIsSearching((v) => !v); setSearchQuery(''); }}
+            title={isSearching ? 'Close search' : 'Search messages'}
+            className="text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors text-lg px-1"
+            aria-label="Search messages"
+          >
+            {isSearching ? '✕' : '🔍'}
+          </button>
           <MembersPanel members={members} />
           {isMember && (
             <button
@@ -671,6 +795,25 @@ export default function CategoryChat({
             ← Back
           </button>
         </div>
+
+        {/* Search bar */}
+        {isSearching && (
+          <div className="max-w-4xl mx-auto mt-2">
+            <input
+              autoFocus
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search messages…"
+              className="w-full border border-gray-300 dark:border-slate-600 rounded-full px-4 py-2 text-sm text-gray-900 dark:text-slate-100 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            {searchQuery.trim() && (
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 px-2">
+                {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''} found
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Leave Group Confirmation Modal */}
@@ -707,42 +850,66 @@ export default function CategoryChat({
         <div className="max-w-4xl mx-auto">
           {loadingMessages ? (
             <div className="text-center text-gray-500 dark:text-slate-400 py-8">Loading messages...</div>
-          ) : visibleMessages.length === 0 ? (
+          ) : filteredMessages.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">💬</div>
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300">No messages yet</h3>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300">
+                {isSearching && searchQuery.trim() ? 'No messages match your search' : 'No messages yet'}
+              </h3>
               <p className="text-gray-500 dark:text-slate-400 mt-2">
-                Be the first to say hello to the {displayMonth} {categoryShort} group!
+                {isSearching && searchQuery.trim()
+                  ? 'Try a different search term.'
+                  : `Be the first to say hello to the ${displayMonth} ${categoryShort} group!`}
               </p>
             </div>
           ) : (
-            visibleMessages.map((msg) => (
-              <ChatMessage
-                key={msg.id}
-                messageId={msg.id}
-                senderId={msg.sender_id}
-                senderName={msg.sender_name}
-                senderRole={
-                  msg.sender_id === user?.id
-                    ? currentUserRole
-                    : (senderRoles[msg.sender_id] ?? 'member')
-                }
-                content={msg.content}
-                imageUrl={msg.image_url}
-                createdAt={msg.created_at}
-                isOwnMessage={msg.sender_id === user?.id}
-                onClickUsername={setSelectedUserId}
-                onLongPressUsername={(userId, userName, userRole) => {
-                  if (isAdmin && userId !== user?.id) {
-                    setAdminActionTarget({ userId, userName, userRole });
+            filteredMessages.map((msg) => {
+              const msgReactions = reactionsMap[msg.id] ?? [];
+              const reactionSummary = Object.entries(
+                msgReactions.reduce<Record<string, { count: number; reacted: boolean }>>((acc, r) => {
+                  if (!acc[r.emoji]) acc[r.emoji] = { count: 0, reacted: false };
+                  acc[r.emoji].count += 1;
+                  if (r.user_id === user?.id) acc[r.emoji].reacted = true;
+                  return acc;
+                }, {})
+              ).map(([emoji, data]) => ({ emoji, ...data }));
+
+              return (
+                <ChatMessage
+                  key={msg.id}
+                  messageId={msg.id}
+                  senderId={msg.sender_id}
+                  senderName={msg.sender_name}
+                  senderRole={
+                    msg.sender_id === user?.id
+                      ? currentUserRole
+                      : (senderRoles[msg.sender_id] ?? 'member')
                   }
-                }}
-                onLongPress={(messageId, senderId, content) => {
-                  const msg = messages.find((m) => m.id === messageId);
-                  setActionSheet({ messageId, senderId, content, createdAt: msg?.created_at ?? new Date().toISOString() });
-                }}
-              />
-            ))
+                  senderAvatar={
+                    msg.sender_id === user?.id
+                      ? (senderAvatars[user.id] ?? getDefaultAvatar(user.id))
+                      : (senderAvatars[msg.sender_id] ?? getDefaultAvatar(msg.sender_id))
+                  }
+                  content={msg.content}
+                  imageUrl={msg.image_url}
+                  createdAt={msg.created_at}
+                  isOwnMessage={msg.sender_id === user?.id}
+                  reactions={reactionSummary}
+                  onReact={handleReact}
+                  onClickUsername={setSelectedUserId}
+                  onLongPressUsername={(userId, userName, userRole) => {
+                    if (isAdmin && userId !== user?.id) {
+                      setAdminActionTarget({ userId, userName, userRole });
+                    }
+                  }}
+                  onLongPress={(messageId, senderId, content) => {
+                    hapticMedium();
+                    const foundMsg = messages.find((m) => m.id === messageId);
+                    setActionSheet({ messageId, senderId, content, createdAt: foundMsg?.created_at ?? new Date().toISOString() });
+                  }}
+                />
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
