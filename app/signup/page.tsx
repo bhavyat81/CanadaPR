@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 
 export default function SignupPage() {
   const router = useRouter();
   const { user, loading, error: authError } = useAuth();
+  const keyboardHeight = useKeyboardHeight();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [consentChecked, setConsentChecked] = useState(false);
@@ -53,7 +55,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center px-4" style={{ paddingBottom: keyboardHeight }}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
