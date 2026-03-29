@@ -192,7 +192,7 @@ function VaultPickerModal({ userId, onSelect, onCancel }: VaultPickerModalProps)
   );
 }
 
-export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, userId, onKeyboardOpen }: ChatInputProps) {
+export default function ChatInput({ onSendMessage, disabled, editingMessage, onCancelEdit, userId }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
