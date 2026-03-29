@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.bhavyat.canadapr',
@@ -22,9 +23,8 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
     Keyboard: {
-      resize: 'none',
+      resize: KeyboardResize.None,
       resizeOnFullScreen: true,
-      scroll: true,
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],

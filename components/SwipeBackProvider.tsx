@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { isNativeCapacitor } from '@/lib/capacitor';
 
 const SWIPE_EDGE_THRESHOLD = 30; // px from left edge where swipe must start
 const SWIPE_MIN_DISTANCE = 100;  // minimum horizontal distance to trigger
@@ -15,10 +16,11 @@ export default function SwipeBackProvider({
   const router = useRouter();
 
   // Hide the Capacitor splash screen once the web app has mounted.
-  // The dynamic import is intentionally fire-and-forget: on web browsers
-  // (non-Capacitor), the import resolves but SplashScreen.hide() is a no-op,
-  // so errors are safely ignored.
+  // Only attempt this on native Capacitor platforms — on web the native bridge
+  // is absent and the dynamic import may fail during Next.js static builds.
   useEffect(() => {
+    if (!isNativeCapacitor()) return;
+
     import('@capacitor/splash-screen')
       .then(({ SplashScreen }) => SplashScreen.hide())
       .catch(() => {});
