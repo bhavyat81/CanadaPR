@@ -157,7 +157,7 @@ export default function WelcomePage() {
 
   const handleShare = async () => {
     hapticLight();
-    const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://canadaprchat.com';
+    const shareUrl = 'https://apps.apple.com/ca/app/canadapr/id6760606035';
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({

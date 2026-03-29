@@ -47,5 +47,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Canada PR Chat needs access to your photo library to share images in chat and save documents to your vault.</string>
 </dict>
 </plist>

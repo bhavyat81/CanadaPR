@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     iosScheme: 'https',
-    allowNavigation: ['www.canada.ca'],
+    allowNavigation: ['www.canada.ca', '*.supabase.co'],
   },
   plugins: {
     SplashScreen: {
