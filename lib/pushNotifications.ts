@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { isNativeCapacitor } from '@/lib/capacitor';
 
 let initialized = false;
 
@@ -14,6 +15,7 @@ export async function savePushToken(userId: string, token: string): Promise<void
 
 export async function initPushNotifications(userId: string): Promise<void> {
   if (initialized) return;
+  if (!isNativeCapacitor()) return;
   initialized = true;
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
