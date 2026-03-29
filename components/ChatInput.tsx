@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { hapticLight, hapticError } from '@/lib/haptics';
 
 /** ms to wait for the iOS keyboard animation to settle before scrolling */
 const KEYBOARD_ANIMATION_SETTLE_MS = 300;
@@ -241,8 +242,28 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     try {
       await onSendMessage(message.trim());
       setMessage('');
+      hapticLight();
+    } catch {
+      hapticError();
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleCameraCapture = async () => {
+    setShowPopup(false);
+    try {
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        quality: 85,
+      });
+      if (photo.dataUrl) {
+        setCropSrc(photo.dataUrl);
+      }
+    } catch (err) {
+      console.error('Camera capture failed:', err);
     }
   };
 
@@ -357,10 +378,19 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
               <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600 overflow-hidden min-w-[180px] z-10">
                 <button
                   type="button"
-                  onClick={() => { setShowPopup(false); fileRef.current?.click(); }}
+                  onClick={handleCameraCapture}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   <span className="text-base">📷</span>
+                  <span>Take Photo</span>
+                </button>
+                <div className="h-px bg-gray-100 dark:bg-slate-700" />
+                <button
+                  type="button"
+                  onClick={() => { setShowPopup(false); fileRef.current?.click(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <span className="text-base">🖼️</span>
                   <span>Upload from Gallery</span>
                 </button>
                 <div className="h-px bg-gray-100 dark:bg-slate-700" />

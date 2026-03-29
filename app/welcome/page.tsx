@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
+import { initPushNotifications } from '@/lib/pushNotifications';
 
 export default function WelcomePage() {
   const { user, loading: authLoading, error: authError } = useAuth();
@@ -42,6 +43,8 @@ export default function WelcomePage() {
         }
 
         setDisplayName(profile.display_name);
+        // Initialize push notifications now that user is logged in
+        initPushNotifications(user.id);
       } catch (err) {
         console.error('Profile load failed:', err);
         setProfileError('Failed to load profile. Please try again.');

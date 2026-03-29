@@ -1,5 +1,8 @@
+'use client';
+
 import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
+import ReactionPicker from './ReactionPicker';
 
 const LONG_PRESS_DURATION = 500;
 
@@ -14,15 +17,24 @@ function getRoleLabel(role: string): string {
   }
 }
 
+interface Reaction {
+  emoji: string;
+  count: number;
+  reacted: boolean;
+}
+
 interface ChatMessageProps {
   messageId: string;
   senderId: string;
   senderName: string;
   senderRole?: string;
+  senderAvatar?: string;
   content: string;
   imageUrl?: string;
   createdAt: string;
   isOwnMessage: boolean;
+  reactions?: Reaction[];
+  onReact?: (messageId: string, emoji: string) => void;
   onClickUsername?: (senderId: string) => void;
   onLongPressUsername?: (senderId: string, senderName: string, senderRole: string) => void;
   onLongPress?: (messageId: string, senderId: string, content: string) => void;
@@ -33,10 +45,13 @@ export default function ChatMessage({
   senderId,
   senderName,
   senderRole = 'member',
+  senderAvatar,
   content,
   imageUrl,
   createdAt,
   isOwnMessage,
+  reactions,
+  onReact,
   onClickUsername,
   onLongPressUsername,
   onLongPress,
@@ -47,6 +62,8 @@ export default function ChatMessage({
   });
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const baseName = isOwnMessage ? 'You' : senderName;
   const roleLabel = getRoleLabel(senderRole);
@@ -62,10 +79,22 @@ export default function ChatMessage({
     };
   }, []);
 
+  useEffect(() => {
+    if (!showReactionPicker) return;
+    const handler = () => setShowReactionPicker(false);
+    document.addEventListener('touchstart', handler, { passive: true });
+    document.addEventListener('mousedown', handler);
+    return () => {
+      document.removeEventListener('touchstart', handler);
+      document.removeEventListener('mousedown', handler);
+    };
+  }, [showReactionPicker]);
+
   const handleTouchStart = () => {
     if (!onLongPress) return;
     longPressTimer.current = setTimeout(() => {
       onLongPress(messageId, senderId, content);
+      setShowReactionPicker(true);
     }, LONG_PRESS_DURATION);
   };
 
@@ -95,6 +124,12 @@ export default function ChatMessage({
     onClickUsername?.(senderId);
   };
 
+  const avatarEl = (
+    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center text-sm flex-shrink-0 select-none">
+      {senderAvatar ?? '👤'}
+    </div>
+  );
+
   return (
     <>
       {lightboxOpen && imageUrl && (
@@ -114,9 +149,11 @@ export default function ChatMessage({
       )}
 
       <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} mb-3`}>
-        <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+        {/* Avatar + name row */}
+        <div className={`flex items-center gap-1.5 mb-0.5 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+          {avatarEl}
           <button
-            className={`text-xs font-semibold mb-1 hover:underline focus:outline-none ${
+            className={`text-xs font-semibold hover:underline focus:outline-none ${
               isOwnMessage ? 'text-red-600 dark:text-red-400 text-right' : 'text-blue-600 dark:text-blue-400 text-left'
             }`}
             onClick={handleUsernameClick}
@@ -130,6 +167,18 @@ export default function ChatMessage({
           >
             {displayName}
           </button>
+        </div>
+
+        <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} relative`}>
+          {/* Reaction picker floating above message */}
+          {showReactionPicker && onReact && (
+            <div className={`absolute bottom-full mb-1 z-20 ${isOwnMessage ? 'right-0' : 'left-0'}`}>
+              <ReactionPicker
+                onReact={(emoji) => onReact(messageId, emoji)}
+                onClose={() => setShowReactionPicker(false)}
+              />
+            </div>
+          )}
 
           <div
             className={`max-w-[75%] rounded-2xl shadow-sm cursor-pointer select-none ${
@@ -151,18 +200,43 @@ export default function ChatMessage({
                 onClick={() => setLightboxOpen(true)}
                 className="block rounded-xl overflow-hidden"
               >
+                {!imageLoaded && (
+                  <div className="w-[240px] h-[160px] bg-gray-200 dark:bg-slate-600 animate-pulse rounded-xl" />
+                )}
                 <Image
                   src={imageUrl}
                   alt="Chat image"
                   width={240}
-                  height={240}
-                  className="rounded-xl max-w-[240px] object-cover"
+                  height={0}
+                  style={{ height: 'auto' }}
+                  className={`rounded-xl max-w-[240px] object-contain ${imageLoaded ? '' : 'hidden'}`}
                   unoptimized
+                  onLoad={() => setImageLoaded(true)}
                 />
               </button>
             )}
             {content && <p className="text-sm">{content}</p>}
           </div>
+
+          {/* Reaction pills */}
+          {reactions && reactions.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {reactions.map((r) => (
+                <button
+                  key={r.emoji}
+                  onClick={() => onReact?.(messageId, r.emoji)}
+                  className={`flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                    r.reacted
+                      ? 'bg-red-100 dark:bg-red-900/40 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300'
+                      : 'bg-gray-100 dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300'
+                  }`}
+                >
+                  <span>{r.emoji}</span>
+                  <span className="font-medium">{r.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <span className="text-xs text-gray-400 dark:text-slate-500 mt-1">{formattedTime}</span>
         </div>

@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import UserProfileModal from './UserProfileModal';
+import { getDefaultAvatar } from '@/lib/avatars';
 
 interface Member {
   id: string;
   display_name: string;
+  avatar_emoji?: string;
 }
 
 interface MembersPanelProps {
@@ -51,7 +53,9 @@ export default function MembersPanel({ members }: MembersPanelProps) {
                     }}
                     className="w-full text-left px-4 py-2.5 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
                   >
-                    <span className="text-sm text-gray-600 dark:text-slate-400">👤</span>
+                    <span className="text-sm text-gray-600 dark:text-slate-400">
+                      {member.avatar_emoji ?? getDefaultAvatar(member.id)}
+                    </span>
                     <span className="text-sm font-medium text-gray-800 dark:text-slate-100 truncate">
                       {member.display_name}
                     </span>
