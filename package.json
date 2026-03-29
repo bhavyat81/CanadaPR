@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clean": "rm -rf out .next",
+    "prebuild": "npm run clean",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:mobile": "next build && npx cap sync",
-    "build:ios": "next build && npx cap sync ios && npx cap open ios",
-    "build:android": "next build && npx cap sync android && npx cap open android"
+    "build:mobile": "npm run clean && next build && npx cap sync",
+    "build:ios": "npm run clean && next build && npx cap sync ios && npx cap open ios",
+    "build:android": "npm run clean && next build && npx cap sync android && npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
