@@ -23,6 +23,7 @@ export default function CategoryClient() {
   const [userPrMonth, setUserPrMonth] = useState<string | null>(null);
   const [userPrCategory, setUserPrCategory] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
+  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set([new Date().getFullYear()]));
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -123,6 +124,28 @@ export default function CategoryClient() {
 
   const allMonths = generateMonths();
 
+  // Group months by year
+  const monthsByYear = allMonths.reduce<Record<number, string[]>>((acc, { value: month }) => {
+    const year = parseInt(month.split('-')[0], 10);
+    if (!acc[year]) acc[year] = [];
+    acc[year].push(month);
+    return acc;
+  }, {});
+
+  const years = Object.keys(monthsByYear).map(Number).sort();
+
+  const toggleYear = (year: number) => {
+    setExpandedYears((prev) => {
+      const next = new Set(prev);
+      if (next.has(year)) {
+        next.delete(year);
+      } else {
+        next.add(year);
+      }
+      return next;
+    });
+  };
+
   const pageTitle = categoryInfo
     ? `${categoryInfo.label} Groups`
     : `${decodedCategory} Groups`;
@@ -138,22 +161,44 @@ export default function CategoryClient() {
             ← Back to Categories
           </button>
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-6">{pageTitle}</h1>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {allMonths.map(({ value: month }) => (
-            <GroupCard
-              key={month}
-              month={month}
-              displayName={formatMonth(month)}
-              memberCount={memberCounts[month] || 0}
-              isUserGroup={
-                month === userPrMonth && userPrCategory === decodedCategory
-              }
-              category={decodedCategory}
-              isJoined={joinedGroups.has(`${decodedCategory}:${month}`)}
-              onJoin={() => handleJoin(month)}
-            />
-          ))}
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">{pageTitle}</h1>
+        <p className="text-sm font-semibold text-gray-600 dark:text-slate-300 mb-5">
+          📅 Application Filing Month
+        </p>
+
+        <div className="space-y-4">
+          {years.map((year) => {
+            const expanded = expandedYears.has(year);
+            return (
+              <div key={year} className="rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700">
+                <button
+                  onClick={() => toggleYear(year)}
+                  className="w-full flex items-center justify-between px-5 py-3 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors font-bold text-gray-800 dark:text-slate-100 text-lg"
+                >
+                  <span>{year}</span>
+                  <span className="text-gray-500 dark:text-slate-400 text-base">{expanded ? '▲' : '▼'}</span>
+                </button>
+                {expanded && (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-slate-900">
+                    {monthsByYear[year].map((month) => (
+                      <GroupCard
+                        key={month}
+                        month={month}
+                        displayName={formatMonth(month)}
+                        memberCount={memberCounts[month] || 0}
+                        isUserGroup={
+                          month === userPrMonth && userPrCategory === decodedCategory
+                        }
+                        category={decodedCategory}
+                        isJoined={joinedGroups.has(`${decodedCategory}:${month}`)}
+                        onJoin={() => handleJoin(month)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
