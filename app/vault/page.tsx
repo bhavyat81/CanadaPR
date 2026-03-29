@@ -110,7 +110,7 @@ export default function VaultPage() {
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,.png,.gif,.heic,.heif,.webp"
           multiple
           className="hidden"
           onChange={handleFileChange}
