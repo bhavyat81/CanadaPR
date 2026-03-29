@@ -51,6 +51,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Canada PR Chat needs camera access to take photos for your vault and chat messages.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Canada PR Chat needs access to your photo library to share images in chat and save documents to your vault.</string>
 </dict>
