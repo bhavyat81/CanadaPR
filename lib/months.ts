@@ -8,10 +8,10 @@ export interface MonthOption {
   label: string;  // e.g., "November 2025"
 }
 
-/** Generate month options from January 2025 to December 2026 */
+/** Generate month options from January 2024 to December 2026 */
 export const generateMonths = (): MonthOption[] => {
   const months: MonthOption[] = [];
-  for (let year = 2025; year <= 2026; year++) {
+  for (let year = 2024; year <= 2026; year++) {
     for (let month = 1; month <= 12; month++) {
       months.push({
         value: `${year}-${String(month).padStart(2, '0')}`,
