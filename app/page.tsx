@@ -40,7 +40,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.08)_0%,_transparent_60%)]" />
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <div className="flex justify-center mb-8">
-            <Image src="/logo.png" alt="Canada PR Chat" width={144} height={144} className="rounded-3xl shadow-2xl" />
+            <Image src="/logo.png" alt="Canada PR Chat" width={144} height={144} className="shadow-2xl" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Canada PR Chat

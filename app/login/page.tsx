@@ -55,7 +55,7 @@ export default function LoginPage() {
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <Image src="/logo.png" alt="Canada PR Chat" width={96} height={96} className="rounded-2xl shadow-lg" />
+            <Image src="/logo.png" alt="Canada PR Chat" width={96} height={96} className="shadow-lg" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Welcome Back</h1>
           <p className="text-gray-500 dark:text-slate-400 mt-1">Log in to your Canada PR Chat account</p>
