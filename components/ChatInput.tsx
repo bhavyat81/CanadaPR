@@ -243,7 +243,8 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
       await onSendMessage(message.trim());
       setMessage('');
       hapticLight();
-    } catch {
+    } catch (err) {
+      console.error('Send failed:', err);
       hapticError();
     } finally {
       setSending(false);

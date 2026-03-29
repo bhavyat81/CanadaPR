@@ -94,7 +94,6 @@ export default function ChatMessage({
     if (!onLongPress) return;
     longPressTimer.current = setTimeout(() => {
       onLongPress(messageId, senderId, content);
-      setShowReactionPicker(true);
     }, LONG_PRESS_DURATION);
   };
 
@@ -238,7 +237,18 @@ export default function ChatMessage({
             </div>
           )}
 
-          <span className="text-xs text-gray-400 dark:text-slate-500 mt-1">{formattedTime}</span>
+          <div className={`flex items-center gap-1.5 mt-1 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+            <span className="text-xs text-gray-400 dark:text-slate-500">{formattedTime}</span>
+            {onReact && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowReactionPicker((v) => !v); }}
+                className="text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 text-xs transition-colors leading-none"
+                aria-label="React to message"
+              >
+                😊
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </>

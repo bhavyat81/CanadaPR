@@ -49,6 +49,8 @@ interface ReactionRow {
 
 type ReactionsMap = Record<string, ReactionRow[]>;
 
+type ProfileData = { id: string; display_name: string; avatar_emoji: string | null };
+
 export default function CategoryChat({
   category,
   month,
@@ -277,7 +279,7 @@ export default function CategoryChat({
     if (!user) return;
 
     interface GroupMemberRow {
-      profiles: { id: string; display_name: string; avatar_emoji: string | null } | { id: string; display_name: string; avatar_emoji: string | null }[] | null;
+      profiles: ProfileData | ProfileData[] | null;
     }
 
     const loadMembership = async () => {
@@ -302,7 +304,7 @@ export default function CategoryChat({
             if (!p) return [];
             return Array.isArray(p) ? p : [p];
           })
-          .filter((p): p is { id: string; display_name: string; avatar_emoji: string | null } => !!p && !!p.display_name)
+          .filter((p): p is ProfileData => !!p && !!p.display_name)
           .map((p) => ({ id: p.id, display_name: p.display_name, avatar_emoji: p.avatar_emoji ?? undefined }));
         setMembers(memberList);
       }
