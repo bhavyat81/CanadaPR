@@ -4,9 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { hapticLight, hapticError } from '@/lib/haptics';
 
-/** ms to wait for the iOS keyboard animation to settle before scrolling */
-const KEYBOARD_ANIMATION_SETTLE_MS = 300;
-
 /** Matches the VaultPhoto shape stored by app/vault/page.tsx */
 interface VaultPhoto {
   id: string;
@@ -228,13 +225,9 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
   }, [showPopup]);
 
   const handleFocus = () => {
-    // Notify parent to scroll messages to bottom so the latest messages
-    // remain visible above the keyboard when it opens.
-    onKeyboardOpen?.();
-    // Also scroll the input itself into view after the iOS keyboard animation settles.
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }, KEYBOARD_ANIMATION_SETTLE_MS);
+    // Scroll the input itself into view as a secondary fallback.
+    // The parent component now handles scrolling to bottom via native keyboard events.
+    formRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

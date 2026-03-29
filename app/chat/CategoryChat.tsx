@@ -15,14 +15,12 @@ import ReportModal from '@/components/ReportModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { formatMonth } from '@/lib/months';
 import { getCategoryShortLabel, buildGroupKey } from '@/lib/categories';
-import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { hapticMedium, hapticHeavy, hapticSuccess } from '@/lib/haptics';
 
 const MESSAGES_LIMIT = 100;
 const CREATOR_EMAIL = 'bhavyat81admin@gmail.com';
 const EDIT_DELETE_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-/** ms to wait after the viewport stops changing before scrolling to bottom */
-const KEYBOARD_ANIMATION_SETTLE_MS = 300;
 
 interface Message {
   id: string;
@@ -75,41 +73,16 @@ export default function CategoryChat({
     if (nav) setNavbarHeight(nav.offsetHeight);
   }, []);
 
-  // Track visual viewport so the container stays above the iOS keyboard.
-  // With Capacitor Keyboard resize: 'none', window.innerHeight stays fixed but
-  // visualViewport.height shrinks — position the container with fixed insets
-  // derived from these values so the chat input is always visible.
-  const { height: viewportHeight, offsetTop: viewportOffsetTop } = useVisualViewportHeight();
+  // Track keyboard height using Capacitor's native Keyboard plugin events.
+  // Falls back to visualViewport on web.
+  const keyboardHeight = useKeyboardHeight();
 
-  // The keyboard inset is how much of window.innerHeight is hidden below
-  // the visible viewport.  When no keyboard is shown this is 0.
-  const [windowInnerHeight, setWindowInnerHeight] = useState(0);
+  // Scroll to bottom when keyboard opens so the latest messages stay visible.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setWindowInnerHeight(window.innerHeight);
-      const onResize = () => setWindowInnerHeight(window.innerHeight);
-      window.addEventListener('resize', onResize);
-      return () => window.removeEventListener('resize', onResize);
-    }
-  }, []);
-  const keyboardInset =
-    windowInnerHeight > 0 && viewportHeight > 0
-      ? Math.max(0, windowInnerHeight - viewportOffsetTop - viewportHeight)
-      : 0;
-
-  // Scroll to bottom after keyboard animation settles (300 ms) instead of
-  // immediately on every viewport change to avoid jank during the animation.
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (viewportHeight <= 0) return;
-    if (scrollTimerRef.current !== null) clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = setTimeout(() => {
+    if (keyboardHeight > 0) {
       scrollToBottom();
-    }, KEYBOARD_ANIMATION_SETTLE_MS);
-    return () => {
-      if (scrollTimerRef.current !== null) clearTimeout(scrollTimerRef.current);
-    };
-  }, [viewportHeight, scrollToBottom]);
+    }
+  }, [keyboardHeight, scrollToBottom]);
 
   // Admin roles state
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
@@ -650,7 +623,7 @@ export default function CategoryChat({
         top: `${navbarHeight}px`,
         left: 0,
         right: 0,
-        bottom: `${keyboardInset}px`,
+        bottom: `${keyboardHeight}px`,
       }}
     >
       {/* Chat Header — single clean line: ← | Group Name | 👥N | 🚪 */}
