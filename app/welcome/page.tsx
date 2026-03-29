@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { initPushNotifications } from '@/lib/pushNotifications';
+import { hapticLight } from '@/lib/haptics';
 
 const HOW_TO_STEPS = [
   {
@@ -22,7 +23,7 @@ const HOW_TO_STEPS = [
       { abbr: 'ADR', desc: 'Additional Document Request' },
       { abbr: 'PVO', desc: 'Primary Visa Office (Inland)' },
       { abbr: 'SVO', desc: 'Secondary Visa Office (Inland)' },
-      { abbr: 'PAL', desc: 'Port of Entry Authorization Letter (also called Port of Landing)' },
+      { abbr: 'PAL', desc: 'Pre Arrival Letter' },
       { abbr: 'PPR', desc: 'Passport Request' },
       { abbr: 'ECOPR', desc: 'Electronic Confirmation of Permanent Residence' },
       { abbr: 'P1', desc: 'Portal 1 (first IRCC portal update)' },
@@ -51,6 +52,7 @@ export default function WelcomePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !authError && !user) {
@@ -149,6 +151,30 @@ export default function WelcomePage() {
     );
   }
 
+  const handleShare = async () => {
+    hapticLight();
+    const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'https://canadaprchat.com';
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Canada PR Chat',
+          text: 'Connect with fellow Canada PR applicants!',
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // clipboard not available
+    }
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 2500);
+  };
+
   const dashboardCards = [
     { emoji: '👤', label: 'Update My Profile', href: '/profile' },
     { emoji: '💬', label: 'Chat Groups', href: '/groups' },
@@ -181,6 +207,15 @@ export default function WelcomePage() {
               <span className="text-gray-400 dark:text-slate-500 text-lg">→</span>
             </button>
           ))}
+          {/* Share App Card */}
+          <button
+            onClick={handleShare}
+            className="w-full flex items-center gap-4 bg-white dark:bg-slate-800 rounded-xl px-4 py-4 border-l-4 border-green-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
+          >
+            <span className="text-2xl">📲</span>
+            <span className="flex-1 font-semibold text-gray-800 dark:text-slate-100">Share App</span>
+            <span className="text-gray-400 dark:text-slate-500 text-lg">↗</span>
+          </button>
         </div>
 
         {/* How to Use This App */}
@@ -232,6 +267,13 @@ export default function WelcomePage() {
           </button>
         </div>
       </div>
+
+      {/* Share toast */}
+      {shareToast && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gray-800 dark:bg-slate-700 text-white text-sm px-5 py-2.5 rounded-full shadow-lg z-50 animate-fade-in">
+          🔗 Link copied!
+        </div>
+      )}
 
       {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (
