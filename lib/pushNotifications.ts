@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
+let initialized = false;
+
 export async function savePushToken(userId: string, token: string): Promise<void> {
   const { error } = await supabase.from('push_tokens').upsert(
     { user_id: userId, token, platform: 'ios', updated_at: new Date().toISOString() },
@@ -11,6 +13,8 @@ export async function savePushToken(userId: string, token: string): Promise<void
 }
 
 export async function initPushNotifications(userId: string): Promise<void> {
+  if (initialized) return;
+  initialized = true;
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
 
