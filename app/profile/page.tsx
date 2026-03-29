@@ -6,8 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { generateMonths } from '@/lib/months';
 import { PR_CATEGORIES, JOURNEY_STEPS, JOURNEY_STEP_EMOJIS, VISA_OFFICE_STEPS, VISA_OFFICES, formatStepDate } from '@/lib/categories';
-import { getDefaultAvatar } from '@/lib/avatars';
-import AvatarPickerModal from '@/components/AvatarPickerModal';
 import { hapticSuccess, hapticError } from '@/lib/haptics';
 
 const PR_MONTHS = generateMonths();
@@ -28,8 +26,6 @@ export default function ProfilePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-  const [avatarEmoji, setAvatarEmoji] = useState('');
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -52,7 +48,6 @@ export default function ProfilePage() {
         setPrMonth(data.pr_month || '');
         setPrStream(data.pr_stream || '');
         setPrCategory(data.pr_category || '');
-        setAvatarEmoji(data.avatar_emoji || getDefaultAvatar(user.id));
 
         // Load PVO/SVO from profiles text columns into stepDates
         const visaOfficeValues: Record<string, string> = {};
@@ -96,7 +91,6 @@ export default function ProfilePage() {
       pr_stream: prStream,
       pr_category: prCategory,
       application_status: applicationStatus,
-      avatar_emoji: avatarEmoji,
       pvo: stepDates['PVO (Inland)'] || null,
       svo: stepDates['SVO (Inland)'] || null,
       updated_at: new Date().toISOString(),
@@ -198,21 +192,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 py-12 px-4 page-fade-in">
       <div className="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-2xl shadow-lg dark:shadow-slate-900/50 p-8 border border-transparent dark:border-slate-700">
         <div className="text-center mb-8">
-          <button
-            type="button"
-            onClick={() => setShowAvatarPicker(true)}
-            className="text-5xl mb-2 block mx-auto hover:scale-110 transition-transform"
-            aria-label="Change avatar"
-          >
-            {avatarEmoji || '👤'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowAvatarPicker(true)}
-            className="text-xs text-red-600 dark:text-red-400 hover:underline mb-2"
-          >
-            Change Avatar
-          </button>
+          <div className="text-5xl mb-2 block mx-auto select-none">👤</div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Your Profile</h1>
           <p className="text-gray-500 dark:text-slate-400 mt-1">Tell us about your PR application</p>
         </div>
@@ -397,14 +377,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-      )}
-      {/* Avatar Picker Modal */}
-      {showAvatarPicker && (
-        <AvatarPickerModal
-          currentAvatar={avatarEmoji || getDefaultAvatar(user?.id ?? '')}
-          onSelect={(emoji) => { setAvatarEmoji(emoji); setShowAvatarPicker(false); }}
-          onCancel={() => setShowAvatarPicker(false)}
-        />
       )}
     </div>
   );
