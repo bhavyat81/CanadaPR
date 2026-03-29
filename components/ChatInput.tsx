@@ -251,23 +251,6 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
     }
   };
 
-  const handleCameraCapture = async () => {
-    setShowPopup(false);
-    try {
-      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
-      const photo = await Camera.getPhoto({
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Camera,
-        quality: 85,
-      });
-      if (photo.dataUrl) {
-        setCropSrc(photo.dataUrl);
-      }
-    } catch (err) {
-      console.error('Camera capture failed:', err);
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -379,19 +362,10 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
               <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-600 overflow-hidden min-w-[180px] z-10">
                 <button
                   type="button"
-                  onClick={handleCameraCapture}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  <span className="text-base">📷</span>
-                  <span>Take Photo</span>
-                </button>
-                <div className="h-px bg-gray-100 dark:bg-slate-700" />
-                <button
-                  type="button"
                   onClick={() => { setShowPopup(false); fileRef.current?.click(); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                 >
-                  <span className="text-base">🖼️</span>
+                  <span className="text-base">📷</span>
                   <span>Upload from Gallery</span>
                 </button>
                 <div className="h-px bg-gray-100 dark:bg-slate-700" />

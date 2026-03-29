@@ -2,7 +2,6 @@
 
 import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
-import ReactionPicker from './ReactionPicker';
 
 const LONG_PRESS_DURATION = 500;
 
@@ -17,24 +16,15 @@ function getRoleLabel(role: string): string {
   }
 }
 
-interface Reaction {
-  emoji: string;
-  count: number;
-  reacted: boolean;
-}
-
 interface ChatMessageProps {
   messageId: string;
   senderId: string;
   senderName: string;
   senderRole?: string;
-  senderAvatar?: string;
   content: string;
   imageUrl?: string;
   createdAt: string;
   isOwnMessage: boolean;
-  reactions?: Reaction[];
-  onReact?: (messageId: string, emoji: string) => void;
   onClickUsername?: (senderId: string) => void;
   onLongPressUsername?: (senderId: string, senderName: string, senderRole: string) => void;
   onLongPress?: (messageId: string, senderId: string, content: string) => void;
@@ -45,13 +35,10 @@ export default function ChatMessage({
   senderId,
   senderName,
   senderRole = 'member',
-  senderAvatar,
   content,
   imageUrl,
   createdAt,
   isOwnMessage,
-  reactions,
-  onReact,
   onClickUsername,
   onLongPressUsername,
   onLongPress,
@@ -62,7 +49,6 @@ export default function ChatMessage({
   });
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const baseName = isOwnMessage ? 'You' : senderName;
@@ -78,17 +64,6 @@ export default function ChatMessage({
       if (usernameLongPressTimer.current) clearTimeout(usernameLongPressTimer.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!showReactionPicker) return;
-    const handler = () => setShowReactionPicker(false);
-    document.addEventListener('touchstart', handler, { passive: true });
-    document.addEventListener('mousedown', handler);
-    return () => {
-      document.removeEventListener('touchstart', handler);
-      document.removeEventListener('mousedown', handler);
-    };
-  }, [showReactionPicker]);
 
   const handleTouchStart = () => {
     if (!onLongPress) return;
@@ -125,7 +100,7 @@ export default function ChatMessage({
 
   const avatarEl = (
     <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-slate-600 flex items-center justify-center text-sm flex-shrink-0 select-none">
-      {senderAvatar ?? '👤'}
+      👤
     </div>
   );
 
@@ -169,16 +144,6 @@ export default function ChatMessage({
         </div>
 
         <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} relative`}>
-          {/* Reaction picker floating above message */}
-          {showReactionPicker && onReact && (
-            <div className={`absolute bottom-full mb-1 z-20 ${isOwnMessage ? 'right-0' : 'left-0'}`}>
-              <ReactionPicker
-                onReact={(emoji) => onReact(messageId, emoji)}
-                onClose={() => setShowReactionPicker(false)}
-              />
-            </div>
-          )}
-
           <div
             className={`max-w-[75%] rounded-2xl shadow-sm cursor-pointer select-none ${
               isOwnMessage
@@ -217,37 +182,8 @@ export default function ChatMessage({
             {content && <p className="text-sm">{content}</p>}
           </div>
 
-          {/* Reaction pills */}
-          {reactions && reactions.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {reactions.map((r) => (
-                <button
-                  key={r.emoji}
-                  onClick={() => onReact?.(messageId, r.emoji)}
-                  className={`flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                    r.reacted
-                      ? 'bg-red-100 dark:bg-red-900/40 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300'
-                      : 'bg-gray-100 dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300'
-                  }`}
-                >
-                  <span>{r.emoji}</span>
-                  <span className="font-medium">{r.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
           <div className={`flex items-center gap-1.5 mt-1 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
             <span className="text-xs text-gray-400 dark:text-slate-500">{formattedTime}</span>
-            {onReact && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowReactionPicker((v) => !v); }}
-                className="text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 text-xs transition-colors leading-none"
-                aria-label="React to message"
-              >
-                😊
-              </button>
-            )}
           </div>
         </div>
       </div>
