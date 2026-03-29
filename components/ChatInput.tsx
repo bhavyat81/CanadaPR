@@ -354,7 +354,7 @@ export default function ChatInput({ onSendMessage, disabled, editingMessage, onC
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.gif,.heic,.heif,.webp"
               className="hidden"
               onChange={handleFileChange}
             />
