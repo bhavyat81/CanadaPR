@@ -28,7 +28,7 @@ export default function StatusTimeline({ journeySteps, applicationStatus }: Stat
         const done = date !== null;
         return (
           <div key={step} className="flex items-center gap-3">
-            <span className="text-base w-6 text-center">{done ? (JOURNEY_STEP_EMOJIS[step] ?? '✅') : '⬜'}</span>
+            <span className="text-base w-6 text-center">{done ? (JOURNEY_STEP_EMOJIS[step] ?? '✅') : '⚪'}</span>
             <span className={`text-sm ${done ? 'text-gray-800 dark:text-slate-100 font-medium' : 'text-gray-400 dark:text-slate-500'}`}>
               {step}
               {done && (
