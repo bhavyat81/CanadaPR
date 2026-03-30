@@ -56,7 +56,7 @@ interface FilledStep {
 }
 
 export default function TrackerPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const router = useRouter();
   const [prMonth, setPrMonth] = useState<string | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -65,10 +65,10 @@ export default function TrackerPage() {
   const [noMonth, setNoMonth] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, authError, router]);
 
   useEffect(() => {
     if (!user) return;

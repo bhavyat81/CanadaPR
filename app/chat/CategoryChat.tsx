@@ -52,7 +52,7 @@ export default function CategoryChat({
   category: string;
   month: string;
 }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -174,12 +174,10 @@ export default function CategoryChat({
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
-
-  // Load initial user data: profile (display_name, role, terms), and blocked IDs
+  }, [user, authLoading, authError, router]);
   useEffect(() => {
     if (!user) return;
 
