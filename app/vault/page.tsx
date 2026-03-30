@@ -13,7 +13,7 @@ interface VaultPhoto {
 
 export default function VaultPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const [photos, setPhotos] = useState<VaultPhoto[]>([]);
   const [lightboxPhoto, setLightboxPhoto] = useState<VaultPhoto | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -22,10 +22,10 @@ export default function VaultPage() {
   const storageKey = user ? `vault_photos_${user.id}` : null;
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, authError, router]);
 
   useEffect(() => {
     if (!storageKey) return;

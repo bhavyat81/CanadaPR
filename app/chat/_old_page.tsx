@@ -34,7 +34,7 @@ export default function CategoryChatPage({
   params: Promise<{ category: string; month: string }>;
 }) {
   const { category, month } = use(params);
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -58,10 +58,10 @@ export default function CategoryChatPage({
 
   // Redirect if not logged in
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, authError, router]);
 
   // Load user profile
   useEffect(() => {

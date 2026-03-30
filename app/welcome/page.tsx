@@ -56,7 +56,7 @@ export default function WelcomePage() {
   const pushInitRef = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && !authError && !user) {
+    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
   }, [user, authLoading, authError, router]);

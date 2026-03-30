@@ -11,7 +11,7 @@ import { PR_CATEGORIES } from '@/lib/categories';
 export default function CategoryClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
 
   const category = searchParams.get('cat') ?? '';
   const decodedCategory = decodeURIComponent(category);
@@ -30,10 +30,10 @@ export default function CategoryClient() {
   const [saveDateError, setSaveDateError] = useState('');
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, authError, router]);
 
   useEffect(() => {
     if (!authLoading && !category) {
