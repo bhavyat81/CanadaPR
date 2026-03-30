@@ -8,12 +8,11 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     iosScheme: 'https',
-    hostname: 'localhost',
     allowNavigation: ['www.canada.ca', '*.supabase.co'],
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 4000,
+      launchShowDuration: 2000,
       backgroundColor: '#DC2626',
       showSpinner: false,
       launchAutoHide: false,

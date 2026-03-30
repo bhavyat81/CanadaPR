@@ -52,7 +52,7 @@ export default function CategoryChat({
   category: string;
   month: string;
 }) {
-  const { user, loading: authLoading, error: authError } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -174,44 +174,71 @@ export default function CategoryChat({
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    if (!authLoading && !user) {
       router.push('/login');
     }
-  }, [user, authLoading, authError, router]);
+  }, [user, authLoading, router]);
+
   useEffect(() => {
     if (!user) return;
+    supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Failed to load profile:', error);
+          return;
+        }
+        setUserProfile(data);
+      });
+  }, [user]);
 
-    const isCreator = user.email === CREATOR_EMAIL;
+  // Load current user's role (creator is identified by email as a safety net)
+  useEffect(() => {
+    if (!user) return;
+    if (user.email === CREATOR_EMAIL) {
+      setCurrentUserRole('creator_admin');
+      return;
+    }
+    supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        setCurrentUserRole(data?.role ?? 'member');
+      });
+  }, [user]);
 
-    interface UserProfileRow { display_name: string; role: string | null; terms_accepted_at: string | null; }
-    interface BlockRow { blocked_id: string; }
+  // Check if user has accepted terms
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('terms_accepted_at')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        setTermsAccepted(!!data?.terms_accepted_at);
+      });
+  }, [user]);
 
-    Promise.all([
-      supabase
-        .from('profiles')
-        .select('display_name, role, terms_accepted_at')
-        .eq('id', user.id)
-        .single(),
-      supabase
-        .from('blocks')
-        .select('blocked_id')
-        .eq('blocker_id', user.id),
-    ]).then(([profileResult, blocksResult]) => {
-      if (profileResult.data) {
-        const p = profileResult.data as UserProfileRow;
-        setUserProfile({ display_name: p.display_name });
-        setCurrentUserRole(isCreator ? 'creator_admin' : (p.role ?? 'member'));
-        setTermsAccepted(!!p.terms_accepted_at);
-      } else {
-        if (isCreator) setCurrentUserRole('creator_admin');
-      }
-
-      if (blocksResult.data) {
-        const ids = new Set((blocksResult.data as BlockRow[]).map((b) => b.blocked_id));
-        setBlockedIds(ids);
-        blockedIdsRef.current = ids;
-      }
-    });
+  // Load blocked user IDs
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('blocks')
+      .select('blocked_id')
+      .eq('blocker_id', user.id)
+      .then(({ data }) => {
+        if (data) {
+          const ids = new Set(data.map((b: { blocked_id: string }) => b.blocked_id));
+          setBlockedIds(ids);
+          blockedIdsRef.current = ids;
+        }
+      });
   }, [user]);
 
   // Load roles and avatars for a list of sender IDs (skips already-loaded ones)
@@ -244,23 +271,22 @@ export default function CategoryChat({
     }
 
     const loadMembership = async () => {
-      const [membershipResult, groupMemberRowsResult] = await Promise.all([
-        supabase
-          .from('group_members')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('group_key', groupKey)
-          .maybeSingle(),
-        supabase
-          .from('group_members')
-          .select('profiles(id, display_name)')
-          .eq('group_key', groupKey),
-      ]);
+      const { data: membership } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('group_key', groupKey)
+        .maybeSingle();
 
-      setIsMember(!!membershipResult.data);
+      setIsMember(!!membership);
 
-      if (groupMemberRowsResult.data) {
-        const memberList: Member[] = (groupMemberRowsResult.data as GroupMemberRow[])
+      const { data: groupMemberRows } = await supabase
+        .from('group_members')
+        .select('profiles(id, display_name)')
+        .eq('group_key', groupKey);
+
+      if (groupMemberRows) {
+        const memberList: Member[] = (groupMemberRows as GroupMemberRow[])
           .flatMap((row) => {
             const p = row.profiles;
             if (!p) return [];

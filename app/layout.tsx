@@ -34,35 +34,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <head>
-        {/* Ultimate fallback: hide the Capacitor splash screen after 8 seconds
-            even if React/Next.js chunks fail to load entirely. The
-            SwipeBackProvider effect is the primary hide path (runs at ~0 ms
-            after mount); this script only fires when the web layer doesn't
-            load at all. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function () {
-                if (
-                  typeof window !== 'undefined' &&
-                  window.Capacitor &&
-                  typeof window.Capacitor.isNativePlatform === 'function' &&
-                  window.Capacitor.isNativePlatform()
-                ) {
-                  setTimeout(function () {
-                    try {
-                      window.Capacitor.Plugins.SplashScreen.hide();
-                    } catch (e) {
-                      console.error('Last-resort splash hide failed:', e);
-                    }
-                  }, 8000);
-                }
-              })();
-            `,
-          }}
-        />
-      </head>
       <body className="h-full bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans flex flex-col">
         <ThemeProvider>
           <AuthProvider>

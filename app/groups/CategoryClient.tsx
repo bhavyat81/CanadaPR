@@ -11,7 +11,7 @@ import { PR_CATEGORIES } from '@/lib/categories';
 export default function CategoryClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, loading: authLoading, error: authError } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const category = searchParams.get('cat') ?? '';
   const decodedCategory = decodeURIComponent(category);
@@ -30,10 +30,10 @@ export default function CategoryClient() {
   const [saveDateError, setSaveDateError] = useState('');
 
   useEffect(() => {
-    if (!authLoading && !authError && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    if (!authLoading && !user) {
       router.push('/login');
     }
-  }, [user, authLoading, authError, router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     if (!authLoading && !category) {
@@ -47,36 +47,33 @@ export default function CategoryClient() {
     const loadData = async () => {
       setLoadingData(true);
 
-      const [profileResult, journeyStepResult, groupMembersResult, userMembershipsResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('pr_month, pr_category')
-          .eq('id', user.id)
-          .single(),
-        supabase
-          .from('journey_steps')
-          .select('step_date')
-          .eq('user_id', user.id)
-          .eq('step_name', 'Filed PR Application')
-          .maybeSingle(),
-        supabase
-          .from('group_members')
-          .select('group_key')
-          .like('group_key', `${decodedCategory}:%`),
-        supabase
-          .from('group_members')
-          .select('group_key')
-          .eq('user_id', user.id),
-      ]);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('pr_month, pr_category')
+        .eq('id', user.id)
+        .single();
 
-      setUserPrMonth(profileResult.data?.pr_month ?? null);
-      setUserPrCategory(profileResult.data?.pr_category ?? null);
+      setUserPrMonth(profile?.pr_month ?? null);
+      setUserPrCategory(profile?.pr_category ?? null);
 
-      setHasPrApplicationDate(!!(journeyStepResult.data?.step_date));
+      // Check if user has filed PR application date
+      const { data: journeyStep } = await supabase
+        .from('journey_steps')
+        .select('step_date')
+        .eq('user_id', user.id)
+        .eq('step_name', 'Filed PR Application')
+        .maybeSingle();
+
+      setHasPrApplicationDate(!!(journeyStep?.step_date));
+
+      const { data } = await supabase
+        .from('group_members')
+        .select('group_key')
+        .like('group_key', `${decodedCategory}:%`);
 
       const counts: Record<string, number> = {};
-      if (groupMembersResult.data) {
-        groupMembersResult.data.forEach(({ group_key }) => {
+      if (data) {
+        data.forEach(({ group_key }) => {
           const colonIdx = group_key.indexOf(':');
           if (colonIdx !== -1) {
             const month = group_key.slice(colonIdx + 1);
@@ -86,8 +83,12 @@ export default function CategoryClient() {
       }
       setMemberCounts(counts);
 
-      if (userMembershipsResult.data) {
-        setJoinedGroups(new Set(userMembershipsResult.data.map((m: { group_key: string }) => m.group_key)));
+      const { data: userMemberships } = await supabase
+        .from('group_members')
+        .select('group_key')
+        .eq('user_id', user.id);
+      if (userMemberships) {
+        setJoinedGroups(new Set(userMemberships.map((m: { group_key: string }) => m.group_key)));
       }
 
       setLoadingData(false);
