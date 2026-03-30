@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 interface TermsAcceptanceModalProps {
@@ -86,9 +87,9 @@ export default function TermsAcceptanceModal({ userId, onAccepted }: TermsAccept
 
           <p>
             By continuing, you agree to our{' '}
-            <a href="/terms" className="text-red-600 underline font-medium">
+            <Link href="/terms" className="text-red-600 underline font-medium">
               full Terms of Service
-            </a>{' '}
+            </Link>{' '}
             and the Community Guidelines above.
           </p>
         </div>
