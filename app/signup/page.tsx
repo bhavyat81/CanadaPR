@@ -118,13 +118,13 @@ export default function SignupPage() {
             />
             <label htmlFor="consent" className="text-sm text-gray-600 dark:text-slate-400 cursor-pointer">
               I agree to the{' '}
-              <a href="https://canadaprchat.com/privacy-policy.html" target="_blank" rel="noopener noreferrer" className="text-red-600 font-medium hover:underline">
+              <Link href="/privacy" className="text-red-600 font-medium hover:underline">
                 Privacy Policy
-              </a>{' '}
+              </Link>{' '}
               and{' '}
-              <a href="https://canadaprchat.com/terms-of-service.html" target="_blank" rel="noopener noreferrer" className="text-red-600 font-medium hover:underline">
+              <Link href="/terms" className="text-red-600 font-medium hover:underline">
                 Terms of Service
-              </a>
+              </Link>
             </label>
           </div>
           <button
