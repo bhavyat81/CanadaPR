@@ -73,12 +73,18 @@ export default function WelcomePage() {
           .single();
 
         if (error) {
+          // PGRST116 = no rows found = new user without a profile
+          if (error.code === 'PGRST116') {
+            router.push('/profile');
+            return;
+          }
           console.error('Profile load error:', error);
           setProfileError('Failed to load profile. Please try again.');
           return;
         }
 
-        if (!profile) {
+        if (!profile || !profile.display_name) {
+          // Profile exists but display_name is not set — send to profile setup
           router.push('/profile');
           return;
         }
