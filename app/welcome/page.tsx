@@ -83,7 +83,7 @@ export default function WelcomePage() {
           return;
         }
 
-        if (!profile || !profile.display_name) {
+        if (!profile || !profile.display_name?.trim()) {
           // Profile exists but display_name is not set — send to profile setup
           router.push('/profile');
           return;
