@@ -83,6 +83,21 @@ const authStorage = typeof window !== 'undefined' && isNativeCapacitor()
     ? window.localStorage
     : undefined;
 
+/**
+ * On native Capacitor (iOS/Android) the Supabase gotrue-js Web Lock mechanism
+ * deadlocks when combined with async @capacitor/preferences storage because
+ * the lock acquisition blocks the async microtask queue in WKWebView.
+ * The no-op lock bypasses this by calling the callback directly — safe here
+ * because native mobile apps are single-tab so concurrent session access is
+ * not a concern. See: https://github.com/supabase/gotrue-js/issues/325
+ */
+// Parameters match the Supabase lock interface: (name, acquireTimeout, fn) => Promise<T>.
+// The name and acquireTimeout args are intentionally unused — the no-op skips locking entirely.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const noOpLock = async <T>(_name: string, _acquireTimeout: number, fn: () => Promise<T>): Promise<T> => fn();
+
+const isNative = typeof window !== 'undefined' && isNativeCapacitor();
+
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-anon-key',
@@ -93,6 +108,8 @@ export const supabase = createClient(
       storage: authStorage,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      // Disable Web Locks on native Capacitor to prevent deadlock with async storage
+      ...(isNative ? { lock: noOpLock } : {}),
     },
   }
 );
