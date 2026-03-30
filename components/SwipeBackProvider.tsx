@@ -21,9 +21,19 @@ export default function SwipeBackProvider({
   useEffect(() => {
     if (!isNativeCapacitor()) return;
 
+    // Primary: hide splash once the component mounts
     import('@capacitor/splash-screen')
       .then(({ SplashScreen }) => SplashScreen.hide())
-      .catch(() => {});
+      .catch((err) => console.error('Failed to hide splash screen:', err));
+
+    // Fallback: force-hide after 5s in case the above fails
+    const fallback = setTimeout(() => {
+      import('@capacitor/splash-screen')
+        .then(({ SplashScreen }) => SplashScreen.hide())
+        .catch((err) => console.error('Fallback splash hide failed:', err));
+    }, 5000);
+
+    return () => clearTimeout(fallback);
   }, []);
 
   useEffect(() => {
