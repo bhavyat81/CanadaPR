@@ -15,7 +15,7 @@ const config: CapacitorConfig = {
       launchShowDuration: 2000,
       backgroundColor: '#DC2626',
       showSpinner: false,
-      launchAutoHide: false,
+      launchAutoHide: true,
     },
     StatusBar: {
       style: 'LIGHT',
