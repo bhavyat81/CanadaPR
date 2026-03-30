@@ -118,13 +118,13 @@ export default function SignupPage() {
             />
             <label htmlFor="consent" className="text-sm text-gray-600 dark:text-slate-400 cursor-pointer">
               I agree to the{' '}
-              <a href="/privacy-policy.html" className="text-red-600 font-medium hover:underline">
+              <Link href="/privacy" className="text-red-600 font-medium hover:underline">
                 Privacy Policy
-              </a>{' '}
+              </Link>{' '}
               and{' '}
-              <a href="/terms-of-service.html" className="text-red-600 font-medium hover:underline">
+              <Link href="/terms" className="text-red-600 font-medium hover:underline">
                 Terms of Service
-              </a>
+              </Link>
             </label>
           </div>
           <button
