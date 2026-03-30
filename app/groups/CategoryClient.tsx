@@ -47,33 +47,36 @@ export default function CategoryClient() {
     const loadData = async () => {
       setLoadingData(true);
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('pr_month, pr_category')
-        .eq('id', user.id)
-        .single();
+      const [profileResult, journeyStepResult, groupMembersResult, userMembershipsResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('pr_month, pr_category')
+          .eq('id', user.id)
+          .single(),
+        supabase
+          .from('journey_steps')
+          .select('step_date')
+          .eq('user_id', user.id)
+          .eq('step_name', 'Filed PR Application')
+          .maybeSingle(),
+        supabase
+          .from('group_members')
+          .select('group_key')
+          .like('group_key', `${decodedCategory}:%`),
+        supabase
+          .from('group_members')
+          .select('group_key')
+          .eq('user_id', user.id),
+      ]);
 
-      setUserPrMonth(profile?.pr_month ?? null);
-      setUserPrCategory(profile?.pr_category ?? null);
+      setUserPrMonth(profileResult.data?.pr_month ?? null);
+      setUserPrCategory(profileResult.data?.pr_category ?? null);
 
-      // Check if user has filed PR application date
-      const { data: journeyStep } = await supabase
-        .from('journey_steps')
-        .select('step_date')
-        .eq('user_id', user.id)
-        .eq('step_name', 'Filed PR Application')
-        .maybeSingle();
-
-      setHasPrApplicationDate(!!(journeyStep?.step_date));
-
-      const { data } = await supabase
-        .from('group_members')
-        .select('group_key')
-        .like('group_key', `${decodedCategory}:%`);
+      setHasPrApplicationDate(!!(journeyStepResult.data?.step_date));
 
       const counts: Record<string, number> = {};
-      if (data) {
-        data.forEach(({ group_key }) => {
+      if (groupMembersResult.data) {
+        groupMembersResult.data.forEach(({ group_key }) => {
           const colonIdx = group_key.indexOf(':');
           if (colonIdx !== -1) {
             const month = group_key.slice(colonIdx + 1);
@@ -83,12 +86,8 @@ export default function CategoryClient() {
       }
       setMemberCounts(counts);
 
-      const { data: userMemberships } = await supabase
-        .from('group_members')
-        .select('group_key')
-        .eq('user_id', user.id);
-      if (userMemberships) {
-        setJoinedGroups(new Set(userMemberships.map((m: { group_key: string }) => m.group_key)));
+      if (userMembershipsResult.data) {
+        setJoinedGroups(new Set(userMembershipsResult.data.map((m: { group_key: string }) => m.group_key)));
       }
 
       setLoadingData(false);

@@ -35,33 +35,30 @@ export default function GroupsPage() {
     const loadData = async () => {
       setLoadingData(true);
 
-      // Load user profile to get their category
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('pr_category')
-        .eq('id', user.id)
-        .single();
+      const [profileResult, journeyStepResult, profilesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('pr_category')
+          .eq('id', user.id)
+          .single(),
+        supabase
+          .from('journey_steps')
+          .select('step_date')
+          .eq('user_id', user.id)
+          .eq('step_name', 'Filed PR Application')
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('pr_category'),
+      ]);
 
-      setUserCategory(profile?.pr_category ?? null);
+      setUserCategory(profileResult.data?.pr_category ?? null);
 
-      // Check if user has filed PR application date
-      const { data: journeyStep } = await supabase
-        .from('journey_steps')
-        .select('step_date')
-        .eq('user_id', user.id)
-        .eq('step_name', 'Filed PR Application')
-        .maybeSingle();
+      setHasPrApplicationDate(!!(journeyStepResult.data?.step_date));
 
-      setHasPrApplicationDate(!!(journeyStep?.step_date));
-
-      // Load member counts per category
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('pr_category');
-
-      if (profiles) {
+      if (profilesResult.data) {
         const counts: CategoryCounts = {};
-        profiles.forEach(({ pr_category }) => {
+        profilesResult.data.forEach(({ pr_category }) => {
           if (pr_category) {
             counts[pr_category] = (counts[pr_category] || 0) + 1;
           }
