@@ -22,7 +22,7 @@ export default function TermsPage() {
       <h2 className="text-xl font-semibold mt-8 mb-2">Disclaimer</h2>
       <p>Not affiliated with the Government of Canada. For peer support only.</p>
       <h2 className="text-xl font-semibold mt-8 mb-2">Support</h2>
-      <p>Contact: <a href="mailto:support@canadapr.chat" className="text-blue-600 underline">support@canadapr.chat</a></p>
+      <p>Contact: <a href="mailto:talpadabhavya@gmail.com" className="text-blue-600 underline">talpadabhavya@gmail.com</a></p>
     </main>
   );
 }

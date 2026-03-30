@@ -160,7 +160,7 @@ export const JOURNEY_STEP_EMOJIS: Record<string, string> = {
   "Final Decision": "⚖️",
   "P1": "📨",
   "P2": "📩",
-  "PPR": "@",
+  "PPR": "✉️",
   "ECOPR": "🎉",
   "PR Card": "🏆",
 };

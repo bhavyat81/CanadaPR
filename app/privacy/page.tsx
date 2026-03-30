@@ -26,14 +26,14 @@ export default function PrivacyPage() {
       <ul className="mb-4 list-disc ml-8">
         <li>You may request account deletion at any time (contact support below).</li>
         <li>You may edit your display name, profile information, and stage updates.</li>
-        <li>For data deletion or access requests, contact: <a href="mailto:support@canadapr.chat" className="text-blue-600 underline">support@canadapr.chat</a></li>
+        <li>For data deletion or access requests, contact: <a href="mailto:talpadabhavya@gmail.com" className="text-blue-600 underline">talpadabhavya@gmail.com</a></li>
       </ul>
       <h2 className="text-xl font-semibold mt-8 mb-2">Children’s Privacy</h2>
       <p>This app is not designed for children under 13.</p>
       <h2 className="text-xl font-semibold mt-8 mb-2">Updates</h2>
       <p>We may update this policy. See the app for the latest version.</p>
       <h2 className="text-xl font-semibold mt-8 mb-2">Contact</h2>
-      <p>support@canadapr.chat</p>
+      <p>talpadabhavya@gmail.com</p>
     </main>
   );
 }
