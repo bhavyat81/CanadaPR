@@ -65,7 +65,7 @@ export default function TrackerPage() {
   const [noMonth, setNoMonth] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
   }, [user, authLoading, router]);

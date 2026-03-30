@@ -174,7 +174,7 @@ export default function CategoryChat({
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && typeof window !== 'undefined' && window.location.pathname !== '/login') {
       router.push('/login');
     }
   }, [user, authLoading, router]);

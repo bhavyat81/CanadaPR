@@ -6,16 +6,17 @@ const config: CapacitorConfig = {
   appName: 'Canada PR Chat',
   webDir: 'out',
   server: {
+    hostname: 'localhost',
     androidScheme: 'https',
     iosScheme: 'https',
     allowNavigation: ['www.canada.ca', '*.supabase.co'],
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 4000,
       backgroundColor: '#DC2626',
       showSpinner: false,
-      launchAutoHide: true,
+      launchAutoHide: false,
     },
     StatusBar: {
       style: 'LIGHT',
